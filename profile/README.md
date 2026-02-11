@@ -10,8 +10,25 @@
 [![Frontend](https://img.shields.io/badge/Frontend_Apps-4-green)]()
 [![Code](https://img.shields.io/badge/Lines_of_Code-250K+-orange)]()
 [![API](https://img.shields.io/badge/API_Endpoints-800+-purple)]()
+[![Docker](https://img.shields.io/badge/Docker_Containers-21-red)]()
+[![DB Models](https://img.shields.io/badge/DB_Models-254-yellow)]()
+
+**Direka, dibina, dan diurus sepenuhnya oleh seorang pembangun**
 
 </div>
+
+---
+
+## Pembangun
+
+| | |
+|---|---|
+| **Nama** | **Muhammad Luqman** |
+| **Peranan** | Solo Full-Stack Developer & System Architect |
+| **Skop** | Reka bentuk seni bina, pembangunan backend & frontend, reka bentuk pangkalan data, integrasi API luaran, DevOps & deployment, pengurusan infrastruktur |
+| **Lokasi** | Terengganu, Malaysia |
+
+> Keseluruhan platform ini — dari reka bentuk seni bina microservices, pembangunan 10 backend services dalam Go, 4 frontend apps dalam Next.js/TypeScript, reka bentuk 9 skema pangkalan data dengan 254 model, integrasi Shopee & TikTok API, sehingga deployment 21 Docker containers dalam production — dibina sepenuhnya secara solo oleh seorang pembangun.
 
 ---
 
@@ -219,6 +236,194 @@ graph LR
 | Docker Containers | 21 |
 | Git Repositories | 22 |
 | Skema PostgreSQL | `auth`, `catalog`, `inventory`, `sales`, `customer`, `agent`, `marketplace`, `support`, `reporting` |
+
+---
+
+## Reka Bentuk Pangkalan Data (Database Design)
+
+Satu pangkalan data PostgreSQL dengan 9 skema berasingan — setiap perkhidmatan mikro memiliki skema sendiri untuk pengasingan data (*schema-per-service pattern*).
+
+```mermaid
+graph TB
+    subgraph PostgreSQL["PostgreSQL 16 — kilang_batik"]
+        subgraph auth_schema["auth"]
+            AU_1["users"]
+            AU_2["sessions"]
+            AU_3["roles"]
+            AU_4["permissions"]
+            AU_5["password_resets"]
+        end
+
+        subgraph catalog_schema["catalog"]
+            CA_1["products"]
+            CA_2["product_variants"]
+            CA_3["categories"]
+            CA_4["collections"]
+            CA_5["product_images"]
+            CA_6["price_lists"]
+            CA_7["product_tags"]
+        end
+
+        subgraph sales_schema["sales"]
+            SA_1["orders"]
+            SA_2["order_items"]
+            SA_3["payments"]
+            SA_4["shipments"]
+            SA_5["order_status_history"]
+            SA_6["refunds"]
+            SA_7["order_addresses"]
+        end
+
+        subgraph inventory_schema["inventory"]
+            IN_1["warehouses"]
+            IN_2["stock_items"]
+            IN_3["stock_movements"]
+            IN_4["transfers"]
+            IN_5["stock_alerts"]
+        end
+
+        subgraph customer_schema["customer"]
+            CU_1["customers"]
+            CU_2["addresses"]
+            CU_3["customer_segments"]
+            CU_4["customer_tags"]
+        end
+
+        subgraph agent_schema["agent"]
+            AG_1["agents"]
+            AG_2["agent_tiers"]
+            AG_3["commissions"]
+            AG_4["agent_orders"]
+            AG_5["payouts"]
+        end
+
+        subgraph marketplace_schema["marketplace"]
+            MK_1["connections"]
+            MK_2["marketplace_products"]
+            MK_3["marketplace_orders"]
+            MK_4["marketplace_order_items"]
+            MK_5["sync_logs"]
+        end
+
+        subgraph support_schema["support"]
+            SU_1["tickets"]
+            SU_2["ticket_replies"]
+            SU_3["ticket_categories"]
+        end
+
+        subgraph reporting_schema["reporting"]
+            RE_1["daily_sales"]
+            RE_2["product_analytics"]
+            RE_3["report_cache"]
+        end
+    end
+
+    SA_1 -.->|"customer_id"| CU_1
+    SA_1 -.->|"agent_id"| AG_1
+    SA_2 -.->|"product_id"| CA_1
+    SA_2 -.->|"variant_id"| CA_2
+    IN_2 -.->|"variant_id"| CA_2
+    AG_3 -.->|"order_id"| SA_1
+    MK_3 -.->|"internal_order_id"| SA_1
+    MK_2 -.->|"internal_product_id"| CA_1
+```
+
+### Ciri-Ciri Pangkalan Data
+
+| Ciri | Penerangan |
+|------|------------|
+| Schema-per-Service | Setiap servis memiliki skema sendiri — pengasingan data yang jelas |
+| Foreign Key Constraints | Rujukan silang antara skema untuk integriti data |
+| Check Constraints | Pengesahan di peringkat DB (contoh: jumlah pesanan mesti positif) |
+| Indeks Optimum | B-tree, GIN, dan partial indexes untuk prestasi query |
+| UUID Primary Keys | Setiap rekod menggunakan UUID v4 — selamat untuk sistem teragih |
+| Soft Deletes | Rekod tidak dipadam, hanya ditanda `deleted_at` |
+| Audit Columns | `created_at`, `updated_at`, `created_by` pada setiap jadual |
+| GORM AutoMigrate | Migrasi automatik semasa startup servis |
+
+---
+
+## Keselamatan (Security)
+
+| Lapisan | Amalan |
+|---------|--------|
+| **Pengesahan** | JWT (access + refresh token) dengan sesi Redis |
+| **Kata Laluan** | bcrypt hashing dengan cost factor 12 |
+| **Kebenaran** | Role-Based Access Control (RBAC) — 5 peranan berlapis |
+| **API Protection** | Auth middleware pada semua endpoint dilindungi |
+| **Token OAuth** | Disulitkan (AES-256) sebelum disimpan dalam DB |
+| **CORS** | Konfigurasi ketat — hanya domain dibenarkan |
+| **Input Validation** | Pengesahan input pada setiap handler (Gin binding) |
+| **SQL Injection** | Dicegah oleh GORM parameterized queries |
+| **Rate Limiting** | Had kadar pada endpoint sensitif |
+| **HTTPS** | SSL/TLS termination di Nginx (Let's Encrypt) |
+| **Env Secrets** | Rahsia disimpan sebagai env vars, bukan dalam kod |
+
+---
+
+## Cabaran Teknikal & Penyelesaian
+
+Beberapa cabaran teknikal utama yang diselesaikan semasa pembangunan platform ini:
+
+### 1. Penyegerakan Pesanan Marketplace dengan Diskaun Shopee
+**Masalah:** Shopee membenarkan baucar/diskaun yang menjadikan jumlah pesanan lebih rendah daripada jumlah item. Ini menyebabkan `shipping_cost` menjadi negatif dan melanggar *check constraint* dalam PostgreSQL.
+
+**Penyelesaian:** Logik pintar dalam `CreateMarketplaceOrder` — apabila `TotalAmount < subtotal`, sistem mengira perbezaan sebagai `discount` dan menetapkan `shipping_cost = 0`, mengelakkan nilai negatif.
+
+### 2. Seni Bina Event-Driven dengan NATS JetStream
+**Masalah:** Servis perlu berkomunikasi secara asinkron tanpa saling bergantung (*loose coupling*). Contoh: apabila pesanan dicipta, inventori perlu dikemas kini dan notifikasi perlu dihantar — tanpa Order Service perlu tahu tentang kedua-dua servis tersebut.
+
+**Penyelesaian:** Implement NATS JetStream sebagai event bus. Setiap servis menerbitkan (*publish*) event, dan servis lain melanggan (*subscribe*) secara bebas. 22+ jenis event merentasi sistem.
+
+### 3. Pengurusan Token OAuth Shopee yang Tamat Tempoh
+**Masalah:** Token OAuth Shopee tamat setiap 4 jam. Jika token tamat semasa auto-sync, semua operasi akan gagal.
+
+**Penyelesaian:** Background token manager yang memeriksa token setiap 5 minit dan membaharui secara automatik 30 minit sebelum tamat tempoh — memastikan token sentiasa aktif.
+
+### 4. Padanan SKU Merentasi Platform
+**Masalah:** Produk di Shopee mempunyai SKU yang berbeza daripada sistem dalaman. Pesanan dari Shopee perlu dipautkan ke produk dalaman untuk penjejakan inventori.
+
+**Penyelesaian:** Sistem padanan SKU dalam Marketplace Service yang memeta `external_sku` ke `internal_product_id` semasa penyegerakan produk, membolehkan penjejakan stok merentasi semua saluran.
+
+### 5. Satu Pangkalan Data, 9 Skema Berasingan
+**Masalah:** Bagaimana mengasingkan data untuk 10 perkhidmatan mikro tanpa menjalankan 10 pangkalan data berasingan (overhead terlalu tinggi untuk satu VPS).
+
+**Penyelesaian:** Corak *schema-per-service* — satu pangkalan data PostgreSQL dengan 9 skema berasingan. Setiap servis hanya mengakses skemanya sendiri, tetapi masih boleh merujuk silang melalui foreign keys apabila perlu.
+
+---
+
+## Pemantauan & Kebolehpercayaan (Monitoring & Reliability)
+
+```mermaid
+graph LR
+    subgraph Observability["Pemantauan"]
+        LOG["Structured Logging<br/>(Zap JSON)"]
+        TRACE["Distributed Tracing<br/>(OpenTelemetry → Jaeger)"]
+        HEALTH["Health Checks<br/>(/health endpoint)"]
+    end
+
+    subgraph Reliability["Kebolehpercayaan"]
+        GRACEFUL["Graceful Shutdown<br/>(signal handling)"]
+        RESTART["Auto-Restart<br/>(Docker restart policy)"]
+        RETRY["Retry Logic<br/>(HTTP clients)"]
+    end
+
+    subgraph Background["Proses Latar Belakang"]
+        TOKEN["Token Manager<br/>(setiap 5 min)"]
+        SYNC["Order Auto-Sync<br/>(setiap 15 min)"]
+        CACHE["Analytics Cache<br/>(Redis TTL)"]
+    end
+```
+
+| Ciri | Penerangan |
+|------|------------|
+| **Structured Logging** | Semua servis menggunakan Zap JSON logger — mudah dicari dan dianalisis |
+| **Distributed Tracing** | OpenTelemetry + Jaeger — jejak permintaan merentasi semua servis |
+| **Health Checks** | Setiap servis mendedahkan `/health` — Docker memeriksa secara berkala |
+| **Graceful Shutdown** | Menangani signal OS (SIGTERM/SIGINT) — selesaikan permintaan aktif sebelum tutup |
+| **Auto-Restart** | Docker `restart: unless-stopped` — servis pulih secara automatik selepas kegagalan |
+| **Background Schedulers** | Token refresh (5 min), order auto-sync (15 min), analytics cache |
+| **Error Recovery** | Retry logic pada panggilan HTTP antara servis dengan exponential backoff |
 
 ---
 
@@ -908,19 +1113,41 @@ graph TB
 
 ## Deployment
 
-Semua servis dijalankan dalam Docker containers pada satu VPS dengan konfigurasi Docker Compose. Setiap servis mempunyai:
+Semua servis dijalankan dalam Docker containers pada satu VPS dengan konfigurasi Docker Compose.
 
-- Health checks automatik
-- Structured JSON logging (Zap)
-- Distributed tracing (OpenTelemetry → Jaeger)
-- Graceful shutdown handling
-- Auto-restart on failure
+```
+  Production Infrastructure
+  ════════════════════════════════════════
+  Server         : 1x VPS (Linux)
+  Containers     : 21 Docker containers
+  Orchestration  : Docker Compose
+  Reverse Proxy  : Nginx + SSL (Let's Encrypt)
+  Database       : PostgreSQL 16 (9 schemas)
+  Cache          : Redis 7
+  Search         : Meilisearch
+  Event Bus      : NATS JetStream
+  Object Storage : MinIO
+  Tracing        : Jaeger + OpenTelemetry
+```
+
+| Ciri Operasi | Penerangan |
+|-------------|------------|
+| Health Checks | Setiap servis mendedahkan `/health` — Docker memeriksa berkala |
+| Structured Logging | JSON logging (Zap) — mudah dicari dan debug |
+| Distributed Tracing | OpenTelemetry → Jaeger — jejak permintaan merentasi servis |
+| Graceful Shutdown | Signal handling (SIGTERM) — selesaikan permintaan sebelum tutup |
+| Auto-Restart | `restart: unless-stopped` — pulih automatik selepas kegagalan |
+| Background Jobs | Token refresh (5 min), order sync (15 min), analytics cache |
 
 ---
 
 <div align="center">
 
-**Dibina dengan Go, Next.js, dan semangat batik Malaysia**
+**Direka & dibina sepenuhnya oleh Muhammad Luqman**
+
+Solo Full-Stack Developer & System Architect
+
+*Go, Next.js, PostgreSQL, Docker, dan semangat batik Malaysia*
 
 Terengganu, Malaysia
 
