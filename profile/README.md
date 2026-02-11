@@ -222,34 +222,686 @@ graph LR
 
 ---
 
-## Aliran Pesanan
+## Aliran Sistem (System Flows)
+
+### 1. Pengesahan & Kebenaran (Authentication & Authorization)
+
+Sistem pengesahan menggunakan JWT dengan sesi Redis. Setiap permintaan melalui middleware yang mengesahkan token dan memeriksa peranan pengguna.
+
+```mermaid
+sequenceDiagram
+    participant U as Pengguna
+    participant FE as Frontend App
+    participant AUTH as Auth Service
+    participant DB as PostgreSQL
+    participant RD as Redis
+
+    rect rgb(230, 245, 255)
+    Note over U,RD: Pendaftaran Pengguna Baru
+    U->>FE: Isi borang pendaftaran
+    FE->>AUTH: POST /auth/register
+    AUTH->>DB: Simpan pengguna (hash kata laluan)
+    AUTH->>RD: Simpan sesi
+    AUTH-->>FE: JWT token + refresh token
+    FE-->>U: Berjaya log masuk
+    end
+
+    rect rgb(255, 243, 224)
+    Note over U,RD: Log Masuk
+    U->>FE: Masukkan email & kata laluan
+    FE->>AUTH: POST /auth/login
+    AUTH->>DB: Sahkan kredensial
+    AUTH->>RD: Cipta sesi baru
+    AUTH-->>FE: JWT token + refresh token
+    end
+
+    rect rgb(230, 255, 230)
+    Note over FE,RD: Permintaan API Dilindungi
+    FE->>AUTH: GET /api/... (Header: Bearer JWT)
+    AUTH->>AUTH: Sahkan JWT + periksa peranan
+    AUTH->>RD: Semak sesi aktif
+    AUTH-->>FE: Data diminta
+    end
+
+    rect rgb(255, 230, 230)
+    Note over FE,RD: Token Tamat Tempoh
+    FE->>AUTH: POST /auth/refresh
+    AUTH->>RD: Sahkan refresh token
+    AUTH-->>FE: JWT token baru
+    end
+```
+
+**Peranan pengguna:** `superadmin` → `admin` → `staff` → `agent` → `customer`
+
+---
+
+### 2. Katalog Produk (Product Catalog)
+
+Pengurusan produk lengkap dengan sokongan varian, imej (MinIO), carian pantas (Meilisearch), dan penyegerakan automatik ke marketplace.
+
+```mermaid
+sequenceDiagram
+    participant A as Admin
+    participant FE as Admin Panel
+    participant CAT as Catalog Service
+    participant DB as PostgreSQL
+    participant MIO as MinIO
+    participant MS as Meilisearch
+    participant NATS as NATS Event Bus
+    participant MKT as Marketplace Service
+
+    rect rgb(230, 245, 255)
+    Note over A,MKT: Cipta Produk Baru
+    A->>FE: Isi maklumat produk + muat naik imej
+    FE->>CAT: POST /products (multipart)
+    CAT->>MIO: Simpan imej produk
+    MIO-->>CAT: URL imej
+    CAT->>DB: Simpan produk + varian + harga
+    CAT->>MS: Indeks ke Meilisearch
+    CAT->>NATS: Publish: product.created
+    NATS-->>MKT: Terima event
+    MKT->>MKT: Segerak ke Shopee/TikTok
+    CAT-->>FE: Produk berjaya dicipta
+    end
+
+    rect rgb(255, 243, 224)
+    Note over A,MS: Kemas Kini Produk
+    A->>FE: Edit maklumat / harga / stok
+    FE->>CAT: PUT /products/:id
+    CAT->>DB: Kemas kini rekod
+    CAT->>MS: Kemas kini indeks carian
+    CAT->>NATS: Publish: product.updated
+    end
+
+    rect rgb(230, 255, 230)
+    Note over A,DB: Operasi Pukal (Bulk)
+    A->>FE: Muat naik CSV
+    FE->>CAT: POST /products/import
+    CAT->>DB: Import produk secara pukal
+    CAT-->>FE: Laporan import (berjaya/gagal)
+    end
+```
+
+---
+
+### 3. Pesanan Lengkap — Semua Saluran (Complete Order Flow)
+
+Pesanan boleh datang dari 4 saluran berbeza: laman web, ejen jualan, admin manual, dan marketplace (Shopee/TikTok). Semua pesanan disatukan dalam satu sistem.
 
 ```mermaid
 sequenceDiagram
     participant P as Pelanggan
-    participant S as Storefront
-    participant O as Order Service
-    participant I as Inventory Service
-    participant N as NATS
-    participant MK as Marketplace Service
-    participant SH as Shopee
+    participant ST as Storefront
+    participant AG as Agent Portal
+    participant AD as Admin Panel
+    participant SH as Shopee/TikTok
+    participant MKT as Marketplace Service
+    participant ORD as Order Service
+    participant INV as Inventory Service
+    participant NATS as NATS
+    participant CAT as Catalog Service
 
     rect rgb(230, 245, 255)
-    Note over P,O: Pesanan dari Laman Web
-    P->>S: Buat pesanan
-    S->>O: POST /orders
-    O->>I: Tolak stok
-    O->>N: Event: order.created
+    Note over P,NATS: Saluran 1: Pesanan Laman Web
+    P->>ST: Checkout troli
+    ST->>ORD: POST /orders
+    ORD->>CAT: Sahkan produk & harga
+    ORD->>INV: Tolak stok
+    ORD->>NATS: Event: order.created
+    ORD-->>ST: Order #KDM-20250208-001
     end
 
     rect rgb(255, 243, 224)
-    Note over MK,SH: Pesanan dari Shopee (Auto-Sync)
-    SH-->>MK: Pesanan baru di Shopee
-    MK->>MK: Auto-sync setiap 15 minit
-    MK->>O: POST /orders/marketplace
-    O->>I: Tolak stok
-    O->>N: Event: order.created
+    Note over AG,NATS: Saluran 2: Pesanan Ejen
+    AG->>ORD: POST /agent/orders
+    ORD->>CAT: Sahkan produk & harga ejen
+    ORD->>INV: Tolak stok
+    ORD->>NATS: Event: order.created
+    ORD-->>AG: Order + komisyen dikira
     end
+
+    rect rgb(230, 255, 230)
+    Note over AD,NATS: Saluran 3: Pesanan Manual Admin
+    AD->>ORD: POST /admin/orders
+    ORD->>INV: Tolak stok
+    ORD->>NATS: Event: order.created
+    end
+
+    rect rgb(255, 230, 255)
+    Note over SH,NATS: Saluran 4: Marketplace (Auto-Sync)
+    SH-->>MKT: Pesanan baru di Shopee
+    MKT->>MKT: Auto-sync setiap 15 minit
+    MKT->>ORD: POST /orders/marketplace
+    ORD->>INV: Tolak stok
+    ORD->>NATS: Event: order.created
+    end
+```
+
+---
+
+### 4. Kitaran Hayat Pesanan (Order Lifecycle)
+
+Setiap pesanan melalui beberapa status dari awal hingga selesai. Status boleh dikemas kini oleh admin, sistem, atau marketplace.
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: Pesanan baru dicipta
+
+    pending --> confirmed: Admin sahkan / Bayaran diterima
+    pending --> cancelled: Pelanggan batal
+
+    confirmed --> processing: Mula proses
+    confirmed --> cancelled: Admin batal
+
+    processing --> ready_to_ship: Barang dibungkus
+    processing --> cancelled: Admin batal
+
+    ready_to_ship --> shipped: Kurier kutip barang
+    shipped --> delivered: Pelanggan terima
+
+    delivered --> completed: Selesai
+    delivered --> return_requested: Pelanggan mohon pulang
+
+    return_requested --> returned: Barang dipulangkan
+    returned --> refunded: Wang dikembalikan
+
+    cancelled --> refunded: Wang dikembalikan (jika sudah bayar)
+
+    completed --> [*]
+    refunded --> [*]
+```
+
+---
+
+### 5. Inventori & Gudang (Inventory & Warehouse)
+
+Pengurusan stok masa nyata merentasi pelbagai gudang. Stok ditolak apabila pesanan disahkan dan dipulihkan apabila dibatalkan.
+
+```mermaid
+sequenceDiagram
+    participant ORD as Order Service
+    participant NATS as NATS Event Bus
+    participant INV as Inventory Service
+    participant DB as PostgreSQL
+    participant MKT as Marketplace Service
+    participant SH as Shopee
+
+    rect rgb(230, 245, 255)
+    Note over ORD,DB: Tolak Stok (Pesanan Disahkan)
+    ORD->>NATS: Event: order.confirmed
+    NATS-->>INV: Terima event
+    INV->>DB: Tolak stok varian dari gudang
+    INV->>DB: Rekod pergerakan stok
+    INV->>NATS: Event: inventory.stock.changed
+    NATS-->>MKT: Terima event
+    MKT->>SH: Kemas kini stok di Shopee
+    end
+
+    rect rgb(255, 230, 230)
+    Note over ORD,DB: Pulih Stok (Pesanan Dibatalkan)
+    ORD->>NATS: Event: order.cancelled
+    NATS-->>INV: Terima event
+    INV->>DB: Pulihkan stok varian
+    INV->>DB: Rekod pergerakan stok
+    INV->>NATS: Event: inventory.stock.changed
+    end
+
+    rect rgb(255, 243, 224)
+    Note over INV,DB: Amaran Stok Rendah
+    INV->>DB: Semak paras stok
+    INV->>INV: Stok bawah minimum?
+    INV->>NATS: Event: inventory.low_stock
+    end
+
+    rect rgb(230, 255, 230)
+    Note over INV,DB: Pemindahan Antara Gudang
+    INV->>DB: Tolak stok dari Gudang A
+    INV->>DB: Tambah stok ke Gudang B
+    INV->>DB: Rekod pemindahan
+    end
+```
+
+---
+
+### 6. Integrasi Marketplace — Shopee & TikTok
+
+Integrasi penuh dengan Shopee Open Platform dan TikTok Shop API termasuk OAuth, penyegerakan produk, pesanan automatik, dan pengurusan token.
+
+```mermaid
+sequenceDiagram
+    participant A as Admin
+    participant FE as Admin Panel
+    participant MKT as Marketplace Service
+    participant SH as Shopee API
+    participant DB as PostgreSQL
+    participant RD as Redis
+    participant ORD as Order Service
+
+    rect rgb(230, 245, 255)
+    Note over A,DB: Sambungan OAuth
+    A->>FE: Klik "Sambung Shopee"
+    FE->>MKT: GET /connections/shopee/auth-url
+    MKT-->>FE: URL OAuth Shopee
+    FE->>SH: Redirect ke Shopee login
+    SH-->>MKT: Callback dengan auth code
+    MKT->>SH: Tukar code → access token
+    MKT->>DB: Simpan token (encrypted)
+    end
+
+    rect rgb(255, 243, 224)
+    Note over MKT,SH: Segerak Produk
+    A->>FE: Klik "Sync Products"
+    FE->>MKT: POST /connections/:id/sync/products
+    MKT->>SH: GET /product/get_item_list
+    MKT->>DB: Simpan/kemas kini produk
+    MKT-->>FE: 150 produk disegerakkan
+    end
+
+    rect rgb(230, 255, 230)
+    Note over MKT,ORD: Auto-Sync Pesanan (Setiap 15 Minit)
+    MKT->>MKT: Background scheduler tick
+    MKT->>SH: GET /order/get_order_list
+    SH-->>MKT: Senarai pesanan baru
+    loop Setiap pesanan baru
+        MKT->>DB: Simpan ke marketplace DB
+        MKT->>ORD: POST /orders/marketplace
+        ORD-->>MKT: Order ID dalaman
+        MKT->>DB: Simpan internal_order_id
+    end
+    end
+
+    rect rgb(255, 230, 255)
+    Note over MKT,RD: Auto-Refresh Token (Setiap 5 Minit)
+    MKT->>MKT: Token manager check
+    MKT->>DB: Cari token hampir tamat
+    MKT->>SH: POST /auth/token/get (refresh)
+    MKT->>DB: Kemas kini token baru
+    end
+```
+
+---
+
+### 7. Pelanggan & CRM (Customer Management)
+
+Pengurusan data pelanggan dari pelbagai saluran — storefront, ejen, dan admin manual.
+
+```mermaid
+sequenceDiagram
+    participant P as Pelanggan
+    participant ST as Storefront
+    participant AD as Admin Panel
+    participant CUST as Customer Service
+    participant DB as PostgreSQL
+    participant ORD as Order Service
+
+    rect rgb(230, 245, 255)
+    Note over P,DB: Pendaftaran Pelanggan
+    P->>ST: Daftar akaun baru
+    ST->>CUST: POST /customers/register
+    CUST->>DB: Cipta profil pelanggan
+    CUST-->>ST: Akaun berjaya
+    end
+
+    rect rgb(255, 243, 224)
+    Note over P,DB: Pengurusan Alamat
+    P->>ST: Tambah alamat penghantaran
+    ST->>CUST: POST /customers/:id/addresses
+    CUST->>DB: Simpan alamat
+    P->>ST: Tetapkan alamat utama
+    ST->>CUST: PUT /customers/:id/addresses/:aid/default
+    end
+
+    rect rgb(230, 255, 230)
+    Note over AD,ORD: CRM — Sejarah Pelanggan
+    AD->>CUST: GET /admin/customers/:id
+    CUST->>DB: Profil + alamat + segmen + tag
+    AD->>ORD: GET /admin/orders?customer_id=xxx
+    ORD-->>AD: Sejarah pesanan pelanggan
+    AD->>AD: Paparan lengkap pelanggan
+    end
+
+    rect rgb(255, 230, 255)
+    Note over AD,DB: Import Pukal
+    AD->>CUST: POST /admin/customers/import (CSV)
+    CUST->>DB: Import pelanggan secara pukal
+    CUST-->>AD: Laporan import
+    end
+```
+
+---
+
+### 8. Sistem Ejen Jualan (Sales Agent System)
+
+Ejen jualan berdaftar melalui admin dan boleh membuat pesanan bagi pihak pelanggan. Komisyen dikira secara automatik.
+
+```mermaid
+sequenceDiagram
+    participant AD as Admin
+    participant AGP as Agent Portal
+    participant AGT as Agent Service
+    participant ORD as Order Service
+    participant DB as PostgreSQL
+
+    rect rgb(230, 245, 255)
+    Note over AD,DB: Daftar & Urus Ejen
+    AD->>AGT: POST /admin/agents (daftar ejen baru)
+    AGT->>DB: Cipta profil ejen + kadar komisyen
+    AD->>AGT: PUT /admin/agents/:id/tier (tetapkan tier)
+    AGT->>DB: Kemas kini tier & kadar
+    end
+
+    rect rgb(255, 243, 224)
+    Note over AGP,DB: Ejen Buat Pesanan
+    AGP->>AGT: POST /agent/orders
+    AGT->>ORD: Cipta pesanan (source: agent)
+    ORD-->>AGT: Order ID
+    AGT->>DB: Kira komisyen automatik
+    AGT->>DB: Rekod komisyen (pending)
+    AGT-->>AGP: Pesanan + komisyen dikira
+    end
+
+    rect rgb(230, 255, 230)
+    Note over AD,DB: Laporan Prestasi Ejen
+    AD->>AGT: GET /admin/agents/:id/performance
+    AGT->>DB: Jumlah jualan, komisyen, pesanan
+    AGT-->>AD: Dashboard prestasi ejen
+    end
+
+    rect rgb(255, 230, 255)
+    Note over AD,DB: Bayar Komisyen
+    AD->>AGT: POST /admin/commissions/batch-pay
+    AGT->>DB: Kemas kini status: pending → paid
+    end
+```
+
+---
+
+### 9. Sokongan & Tiket (Support Tickets)
+
+Sistem tiket untuk menguruskan pertanyaan dan aduan pelanggan.
+
+```mermaid
+sequenceDiagram
+    participant P as Pelanggan
+    participant ST as Storefront
+    participant AD as Admin Panel
+    participant SUP as Support Service
+    participant DB as PostgreSQL
+
+    rect rgb(230, 245, 255)
+    Note over P,DB: Cipta Tiket Baru
+    P->>ST: Isi borang aduan/pertanyaan
+    ST->>SUP: POST /tickets
+    SUP->>DB: Simpan tiket (status: open)
+    SUP-->>ST: Tiket #TIK-001
+    end
+
+    rect rgb(255, 243, 224)
+    Note over AD,DB: Admin Respon
+    AD->>SUP: GET /admin/tickets (senarai tiket)
+    SUP-->>AD: Senarai tiket terbuka
+    AD->>SUP: POST /admin/tickets/:id/replies
+    SUP->>DB: Simpan balasan + kemas kini status
+    SUP->>DB: Status: open → in_progress
+    end
+
+    rect rgb(230, 255, 230)
+    Note over AD,DB: Selesai & Tutup
+    AD->>SUP: PUT /admin/tickets/:id/status
+    SUP->>DB: Status: in_progress → resolved
+    P->>ST: Sahkan penyelesaian
+    ST->>SUP: PUT /tickets/:id/close
+    SUP->>DB: Status: resolved → closed
+    end
+```
+
+---
+
+### 10. Laporan & Analitik (Reporting & Analytics)
+
+Dashboard analitik masa nyata untuk pemantauan prestasi perniagaan.
+
+```mermaid
+sequenceDiagram
+    participant AD as Admin Panel
+    participant RPT as Reporting Service
+    participant ORD as Order Service
+    participant INV as Inventory Service
+    participant AGT as Agent Service
+    participant DB as PostgreSQL
+
+    rect rgb(230, 245, 255)
+    Note over AD,DB: Dashboard Utama
+    AD->>RPT: GET /admin/dashboard
+    RPT->>DB: Jualan hari ini / minggu / bulan
+    RPT->>DB: Pesanan mengikut status
+    RPT->>DB: Produk terlaris
+    RPT->>DB: Jumlah pelanggan baru
+    RPT-->>AD: Data dashboard lengkap
+    end
+
+    rect rgb(255, 243, 224)
+    Note over AD,DB: Laporan Jualan
+    AD->>RPT: GET /admin/reports/sales?from=...&to=...
+    RPT->>DB: Agregat jualan mengikut tempoh
+    RPT->>DB: Pecahan mengikut saluran
+    RPT-->>AD: Laporan jualan + carta
+    end
+
+    rect rgb(230, 255, 230)
+    Note over AD,DB: Eksport Data
+    AD->>RPT: GET /admin/reports/export?format=csv
+    RPT->>DB: Jana data laporan
+    RPT-->>AD: Fail CSV dimuat turun
+    end
+```
+
+---
+
+### 11. Komunikasi Antara Servis (Inter-Service Communication)
+
+Peta lengkap komunikasi antara semua perkhidmatan mikro melalui NATS Event Bus dan panggilan HTTP langsung.
+
+```mermaid
+graph TB
+    subgraph NATS_Events["NATS Event Bus"]
+        direction TB
+        E1["order.created"]
+        E2["order.confirmed"]
+        E3["order.cancelled"]
+        E4["order.status.updated"]
+        E5["product.created"]
+        E6["product.updated"]
+        E7["product.deleted"]
+        E8["inventory.stock.changed"]
+        E9["inventory.low_stock"]
+        E10["inventory.transfer.completed"]
+        E11["customer.registered"]
+        E12["payment.received"]
+    end
+
+    subgraph Publishers["Penerbit (Publishers)"]
+        ORD_P["Order Service"]
+        CAT_P["Catalog Service"]
+        INV_P["Inventory Service"]
+        CUST_P["Customer Service"]
+    end
+
+    subgraph Subscribers["Pelanggan (Subscribers)"]
+        INV_S["Inventory Service"]
+        MKT_S["Marketplace Service"]
+        NOTIF_S["Notification Service"]
+        RPT_S["Reporting Service"]
+    end
+
+    ORD_P -->|order.*| E1 & E2 & E3 & E4
+    CAT_P -->|product.*| E5 & E6 & E7
+    INV_P -->|inventory.*| E8 & E9 & E10
+    CUST_P -->|customer.*| E11
+
+    E2 & E3 -->|stok| INV_S
+    E5 & E6 & E7 -->|sync produk| MKT_S
+    E8 -->|sync stok| MKT_S
+    E1 & E12 -->|notifikasi| NOTIF_S
+    E1 & E2 & E3 -->|laporan| RPT_S
+```
+
+#### Panggilan HTTP Antara Servis
+
+```mermaid
+graph LR
+    ORD["Order Service"]
+    CAT["Catalog Service"]
+    INV["Inventory Service"]
+    AGT["Agent Service"]
+    MKT["Marketplace Service"]
+    CUST["Customer Service"]
+
+    ORD -->|"Sahkan produk & harga"| CAT
+    ORD -->|"Tolak/pulih stok"| INV
+    ORD -->|"Sahkan pelanggan"| CUST
+    AGT -->|"Cipta pesanan ejen"| ORD
+    MKT -->|"Cipta pesanan marketplace"| ORD
+    MKT -->|"Padankan SKU → produk"| CAT
+    MKT -->|"Segerak stok"| INV
+```
+
+---
+
+### 12. Aliran Pengguna — Kedai Online (Storefront User Journey)
+
+Perjalanan pengguna lengkap dari melayari kedai sehingga pesanan selesai.
+
+```mermaid
+graph TB
+    subgraph Pelayaran["Pelayaran Kedai"]
+        HOME["Laman Utama"] --> BROWSE["Layari Kategori"]
+        HOME --> SEARCH["Carian Produk"]
+        HOME --> COLL["Lihat Koleksi"]
+        BROWSE --> PDP["Halaman Produk"]
+        SEARCH --> PDP
+        COLL --> PDP
+    end
+
+    subgraph Pembelian["Proses Pembelian"]
+        PDP --> VARIANT["Pilih Varian & Kuantiti"]
+        VARIANT --> CART["Tambah ke Troli"]
+        CART --> CHECKOUT["Checkout"]
+        CHECKOUT --> ADDRESS["Pilih Alamat"]
+        ADDRESS --> PAY["Pembayaran"]
+        PAY --> CONFIRM["Pengesahan Pesanan"]
+    end
+
+    subgraph Pengurusan["Pengurusan Akaun"]
+        LOGIN["Log Masuk / Daftar"]
+        PROFILE["Profil Saya"]
+        ADDR_MGMT["Urus Alamat"]
+        ORDER_HIST["Sejarah Pesanan"]
+        TRACK["Jejak Pesanan"]
+        TICKET["Buka Tiket Sokongan"]
+
+        LOGIN --> PROFILE
+        PROFILE --> ADDR_MGMT
+        PROFILE --> ORDER_HIST
+        ORDER_HIST --> TRACK
+        ORDER_HIST --> TICKET
+    end
+
+    CONFIRM --> ORDER_HIST
+```
+
+---
+
+### 13. Aliran Pengguna — Panel Admin (Admin Dashboard Journey)
+
+Gambaran keseluruhan modul dalam panel pentadbir yang menguruskan semua aspek perniagaan.
+
+```mermaid
+graph TB
+    subgraph Dashboard["Dashboard Utama"]
+        DASH["Ringkasan Jualan & Pesanan"]
+    end
+
+    subgraph Produk["Pengurusan Produk"]
+        PROD_LIST["Senarai Produk"]
+        PROD_ADD["Tambah Produk"]
+        PROD_EDIT["Edit Produk & Varian"]
+        CAT_MGMT["Kategori & Koleksi"]
+        PROD_LIST --> PROD_ADD
+        PROD_LIST --> PROD_EDIT
+        PROD_LIST --> CAT_MGMT
+    end
+
+    subgraph Pesanan["Pengurusan Pesanan"]
+        ORD_LIST["Senarai Pesanan"]
+        ORD_DETAIL["Butiran Pesanan"]
+        ORD_STATUS["Kemas Kini Status"]
+        ORD_MANUAL["Cipta Pesanan Manual"]
+        ORD_LIST --> ORD_DETAIL
+        ORD_DETAIL --> ORD_STATUS
+        ORD_LIST --> ORD_MANUAL
+    end
+
+    subgraph Inventori["Inventori & Gudang"]
+        STOCK["Tahap Stok"]
+        WAREHOUSE["Urus Gudang"]
+        TRANSFER["Pemindahan Stok"]
+        ALERTS["Amaran Stok Rendah"]
+        STOCK --> TRANSFER
+        STOCK --> ALERTS
+        STOCK --> WAREHOUSE
+    end
+
+    subgraph Pelanggan["Pelanggan & CRM"]
+        CUST_LIST["Senarai Pelanggan"]
+        CUST_DETAIL["Profil Pelanggan"]
+        CUST_SEG["Segmen & Tag"]
+        CUST_IMPORT["Import CSV"]
+        CUST_LIST --> CUST_DETAIL
+        CUST_LIST --> CUST_SEG
+        CUST_LIST --> CUST_IMPORT
+    end
+
+    subgraph Marketplace["Integrasi Marketplace"]
+        MKT_CONN["Sambungan Shopee/TikTok"]
+        MKT_PROD["Segerak Produk"]
+        MKT_ORD["Segerak Pesanan"]
+        MKT_ANALYTICS["Analitik Marketplace"]
+        MKT_CONN --> MKT_PROD
+        MKT_CONN --> MKT_ORD
+        MKT_CONN --> MKT_ANALYTICS
+    end
+
+    subgraph Ejen["Pengurusan Ejen"]
+        AGT_LIST["Senarai Ejen"]
+        AGT_COMM["Komisyen & Pembayaran"]
+        AGT_PERF["Prestasi Ejen"]
+        AGT_LIST --> AGT_COMM
+        AGT_LIST --> AGT_PERF
+    end
+
+    subgraph Laporan["Laporan & Analitik"]
+        RPT_SALES["Jualan Harian/Bulanan"]
+        RPT_PRODUCT["Prestasi Produk"]
+        RPT_EXPORT["Eksport CSV"]
+        RPT_SALES --> RPT_EXPORT
+        RPT_PRODUCT --> RPT_EXPORT
+    end
+
+    subgraph Sokongan["Sokongan Pelanggan"]
+        TIK_LIST["Senarai Tiket"]
+        TIK_REPLY["Balas Tiket"]
+        TIK_LIST --> TIK_REPLY
+    end
+
+    DASH --> Produk
+    DASH --> Pesanan
+    DASH --> Inventori
+    DASH --> Pelanggan
+    DASH --> Marketplace
+    DASH --> Ejen
+    DASH --> Laporan
+    DASH --> Sokongan
 ```
 
 ---
