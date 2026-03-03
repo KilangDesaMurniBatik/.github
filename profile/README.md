@@ -8,10 +8,12 @@
 
 [![Services](https://img.shields.io/badge/Microservices-10-blue)]()
 [![Frontend](https://img.shields.io/badge/Frontend_Apps-4-green)]()
-[![Code](https://img.shields.io/badge/Lines_of_Code-250K+-orange)]()
-[![API](https://img.shields.io/badge/API_Endpoints-800+-purple)]()
+[![Code](https://img.shields.io/badge/Lines_of_Code-285K+-orange)]()
 [![Docker](https://img.shields.io/badge/Docker_Containers-21-red)]()
-[![DB Models](https://img.shields.io/badge/DB_Models-254-yellow)]()
+[![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)]()
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)]()
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)]()
+[![Playwright](https://img.shields.io/badge/Playwright-E2E_Tests-2EAD33?logo=playwright&logoColor=white)]()
 
 **Designed, built, and maintained entirely by a solo developer**
 
@@ -28,15 +30,15 @@
 | **Scope** | Architecture design, backend & frontend development, database design, external API integration, DevOps & deployment, infrastructure management |
 | **Location** | Terengganu, Malaysia |
 
-> This entire platform — from designing the microservices architecture, developing 10 backend services in Go, 4 frontend apps in Next.js/TypeScript, designing 9 database schemas with 254 models, integrating Shopee & TikTok APIs, to deploying 21 Docker containers in production — was built entirely solo by a single developer.
+> This entire platform — from designing the microservices architecture, developing 10 backend services in Go, 4 frontend apps in Next.js/TypeScript, designing 16 database schemas with 130+ tables, integrating Shopee, TikTok & Parcel Daily APIs, implementing enterprise patterns (Saga, Circuit Breaker, Event Sourcing), to deploying 21 Docker containers in production — was built entirely solo by a single developer.
 
 ---
 
 ## About the Project
 
-Kilang Desa Murni Batik is an end-to-end digital platform that connects a traditional batik factory with modern buyers. The system manages all business operations — from product catalog management, order processing, inventory tracking, to marketplace integration with Shopee and TikTok Shop.
+Kilang Desa Murni Batik is an end-to-end digital platform that connects a traditional batik factory with modern buyers. The system manages all business operations — from product catalog management with flash sales and CMS content, order processing with multi-courier shipping (16 couriers via Parcel Daily), inventory tracking across warehouses, marketplace integration with Shopee and TikTok Shop, to customer support with ticketing and returns/refund workflows.
 
-Built from scratch using a **microservices architecture** with 10 backend services, 4 frontend apps, and 21 Docker containers in production.
+Built from scratch using a **microservices architecture** with 10 backend services, 4 frontend apps, enterprise-grade patterns (Saga, Outbox, Circuit Breaker), and 21 Docker containers in production.
 
 ---
 
@@ -56,43 +58,49 @@ graph TB
     end
 
     subgraph Backend["Backend Microservices"]
-        AUTH["Auth Service<br/>JWT & Sessions"]
-        CAT["Catalog Service<br/>Products & Categories"]
+        AUTH["Auth Service<br/>JWT, RBAC & 2FA"]
+        CAT["Catalog Service<br/>Products, Flash Sales & CMS"]
         INV["Inventory Service<br/>Stock & Warehouses"]
-        ORD["Order Service<br/>Orders & Payments"]
+        ORD["Order Service<br/>Orders, Payments & Shipping"]
         CUST["Customer Service<br/>Customers & CRM"]
         AGENT["Agent Service<br/>Agents & Commissions"]
         MKT["Marketplace Service<br/>Shopee & TikTok"]
         NOTIF["Notification Service<br/>Email & WhatsApp"]
         RPT["Reporting Service<br/>Reports & Analytics"]
-        SUP["Support Service<br/>Support Tickets"]
+        SUP["Support Service<br/>Tickets & Returns"]
     end
 
     subgraph Infrastructure["Infrastructure"]
-        PG[("PostgreSQL<br/>Database")]
-        RD[("Redis<br/>Cache")]
+        PG[("PostgreSQL<br/>16 Schemas")]
+        RD[("Redis<br/>Cache & Locks")]
         NATS["NATS<br/>Event Bus"]
         MINIO["MinIO<br/>Object Storage"]
         MS["Meilisearch<br/>Search Engine"]
         JG["Jaeger<br/>Tracing"]
+        REMBG["Rembg<br/>AI Image Processing"]
     end
 
     subgraph External["External Integrations"]
         SHOPEE["Shopee API"]
         TIKTOK["TikTok Shop API"]
+        PD["Parcel Daily API<br/>(16 Couriers)"]
+        SF["SF Express API"]
+        CURLEC["Curlec FPX<br/>(Payments)"]
     end
 
     ST & AD & AG & WH --> NG
     NG --> AUTH & CAT & INV & ORD & CUST & AGENT & MKT & NOTIF & RPT & SUP
 
     AUTH & CAT & INV & ORD & CUST & AGENT & MKT & RPT & SUP --> PG
-    CAT & INV & MKT --> RD
+    AUTH & CAT & INV & MKT --> RD
     CAT & INV & ORD & MKT --> NATS
     CAT --> MINIO
     CAT --> MS
+    CAT --> REMBG
     AUTH & CAT & ORD & MKT --> JG
 
     MKT --> SHOPEE & TIKTOK
+    ORD --> PD & SF & CURLEC
 ```
 
 ---
@@ -103,37 +111,85 @@ graph TB
 | Feature | Description |
 |---------|-------------|
 | Product Catalog | Product display with fast Meilisearch search, category & collection filters |
+| Flash Sales | Time-limited promotional pricing with countdown |
 | Shopping Cart | Add to cart, update quantity, instant checkout |
-| Payments | Payment gateway integration with status tracking |
+| Payments | Curlec FPX online banking + manual bank transfer with verification |
 | Customer Accounts | Registration, login, order history, saved addresses |
-| Responsive | Optimized for mobile and desktop |
+| Product Reviews | Customer ratings and reviews on products |
+| Tailoring Options | Custom sizing and tailoring service requests |
+| Newsletter | Email subscription for updates and promotions |
+| Responsive | Optimized for mobile and desktop with Framer Motion animations |
 
 ### Admin Panel (Dashboard)
 | Feature | Description |
 |---------|-------------|
 | Order Management | View, process, and track all orders from all channels |
-| Product Management | CRUD products, variants, images, and pricing |
+| Product Management | CRUD products, variants, images, pricing, colors & fabric designs |
+| Flash Sales | Create and manage time-limited promotional campaigns |
+| CMS Pages | Content management system for public and admin pages |
+| Returns Processing | Approve/reject returns, track refund/exchange status |
+| Multi-Courier Shipping | Compare rates across 16 couriers, generate shipping labels |
 | Inventory | Real-time stock tracking, low stock alerts, warehouse transfers |
 | Customers & CRM | Customer list, purchase history, segmentation |
 | Reports & Analytics | Daily/monthly sales, best-selling products, agent performance |
-| Shopee Integration | Connect Shopee store, auto-sync products & orders |
-| Agent Management | Register agents, set commissions, track performance |
+| Shopee & TikTok Integration | Connect stores, auto-sync products, orders & stock |
+| Agent Management | Register agents, set commissions by category, track performance |
 | Customer Support | Ticket system for inquiries and complaints |
 
 ### Marketplace Integration
 | Feature | Description |
 |---------|-------------|
-| Shopee Open Platform | OAuth, product sync, automatic order sync every 15 minutes |
+| Shopee Open Platform | OAuth, product sync, automatic order sync, escrow management |
 | TikTok Shop | API integration for product and order management |
 | Stock Synchronization | Automatic stock updates across all sales channels |
-| Token Management | Auto-refresh OAuth tokens before expiry |
+| Stock Reconciliation | Detect and resolve discrepancies between internal and marketplace stock |
+| Returns Processing | Automated marketplace return handling with dispute resolution |
+| Analytics | Sales performance extraction from marketplace platforms |
+| Token Management | Auto-refresh OAuth tokens 30 minutes before expiry |
 
 ### Agent System
 | Feature | Description |
 |---------|-------------|
-| Agent Portal | Dedicated dashboard for agents to place orders |
+| Agent Portal | Dedicated dashboard with KPIs, orders, customers & team management |
+| Category Commissions | Commission rates configurable per product category |
 | Automatic Commissions | Commission calculation and tracking based on sales |
+| Team Management | Agent groups and hierarchical team structure |
 | Agent Catalog | Product access with special agent pricing |
+
+### Multi-Courier Shipping
+| Feature | Description |
+|---------|-------------|
+| Parcel Daily Integration | 16 couriers — DHL, Flash, J&T, NinjaVan, City-Link, Pos Laju, SF Standard, SF Economy, Aramex, Best Express, Line Clear, Teleport, RedLy, Shopee Express, LEX, KEX Express |
+| Rate Comparison | Real-time rate quotes across all available couriers |
+| Label Generation | Thermal connote and A4 shipping label generation |
+| Tracking Webhooks | Automatic status updates via courier webhook callbacks |
+| COD Support | Cash-on-delivery option with courier integration |
+| SF Express | Direct integration for standard and economy shipping |
+| Pos Laju | Direct integration with Malaysia's national courier |
+
+### Returns & Refunds
+| Feature | Description |
+|---------|-------------|
+| Return Requests | Customer-initiated return requests with reason selection |
+| Admin Approval | Admin review and approve/reject workflow |
+| Return Shipping | Track return shipment back to warehouse |
+| Refund Processing | Automatic refund calculation and processing |
+| Exchange Option | Exchange for different variant/product instead of refund |
+| Stock Restoration | Automatic stock adjustment when returns are received |
+
+### Content & Catalog Management
+| Feature | Description |
+|---------|-------------|
+| Flash Sales | Time-limited promotional discounts with scheduling |
+| Product Reviews | Customer ratings, reviews, and moderation |
+| CMS Pages | Create and manage content pages (public and admin) |
+| Promotional Looks | Styled product sets showcasing complete outfits |
+| Tailoring & Size Charts | Custom sizing options and measurement guides |
+| Auto-Collections | Automatically generated product collections based on rules |
+| Newsletter | Email subscription management for marketing |
+| Color & Fabric Design | Manage fabric designs and color palettes for products |
+| AI Background Removal | Automatic product image background removal via Rembg |
+| Full-Text Search | Typo-tolerant product search powered by Meilisearch |
 
 ---
 
@@ -142,13 +198,13 @@ graph TB
 ```mermaid
 graph LR
     subgraph Backend
-        GO["Go 1.23"]
+        GO["Go 1.24"]
         GIN["Gin Framework"]
         GORM["GORM ORM"]
     end
 
     subgraph Frontend
-        NEXT["Next.js 15"]
+        NEXT["Next.js 14"]
         TS["TypeScript"]
         TW["Tailwind CSS"]
         SC["shadcn/ui"]
@@ -165,28 +221,37 @@ graph LR
         NATS["NATS"]
         MINIO["MinIO"]
         JAEGER["Jaeger"]
+        SENTRY["Sentry"]
     end
 
     subgraph External
         SHOPEE["Shopee API"]
         TIKTOK["TikTok API"]
+        PARCELDAILY["Parcel Daily API"]
+        CURLEC["Curlec FPX"]
     end
 ```
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Backend Language** | Go 1.23 | High-performance microservices |
+| **Backend Language** | Go 1.24 | High-performance microservices |
 | **Web Framework** | Gin | HTTP router & middleware |
-| **ORM** | GORM | Database interaction |
+| **ORM** | GORM | Database interaction with tracing |
 | **Frontend Language** | TypeScript | Type safety |
-| **UI Framework** | Next.js 15 (App Router) | SSR, routing, API proxy |
+| **UI Framework** | Next.js 14 (App Router) | SSR, routing, API proxy |
 | **UI Components** | shadcn/ui + Tailwind CSS | Modern user interface |
-| **Database** | PostgreSQL 16 | Primary data store with dedicated schemas |
-| **Cache** | Redis 7 | Session cache, analytics, tokens |
-| **Search** | Meilisearch | Fast full-text product search |
-| **Message Broker** | NATS | Inter-service communication (event-driven) |
+| **State Management** | Zustand | Client-side state (storefront) |
+| **Animations** | Framer Motion | Smooth UI transitions |
+| **Database** | PostgreSQL 16 | Primary data store with 16 schemas |
+| **Cache** | Redis 7 | Sessions, rate limiting, distributed locks |
+| **Search** | Meilisearch | Fast full-text product search (typo-tolerant) |
+| **Message Broker** | NATS JetStream | Inter-service communication (event-driven) |
 | **Object Storage** | MinIO | Product images, documents |
+| **Image Processing** | Rembg | AI-powered background removal |
+| **Payment Gateway** | Curlec FPX | Online banking payments (Malaysia) |
+| **Shipping** | Parcel Daily + SF Express | Multi-courier shipping (16+ couriers) |
 | **Tracing** | Jaeger + OpenTelemetry | Distributed request tracing |
+| **Error Monitoring** | Sentry | Real-time error tracking & alerting |
 | **Reverse Proxy** | Nginx | SSL termination, load balancing |
 | **Containers** | Docker Compose | Orchestration of 21 containers |
 
@@ -197,51 +262,94 @@ graph LR
 ```
   Source Code Total
   ═══════════════════════════════════════
-  Backend (Go)         : 115,160 lines  │  493 files
-  Frontend (TypeScript): 135,836 lines  │  589 files
+  Backend (Go)         : 130,000+ lines  │  556+ files
+  Frontend (TypeScript): 151,000+ lines  │  600+ files
+  E2E Tests            :   4,600+ lines  │   29  files
   ─────────────────────────────────────
-  TOTAL                : 250,996 lines  │ 1,082 files
+  TOTAL                : 285,000+ lines  │ 1,185+ files
 ```
 
 ### Backend — 10 Microservices
 
 | Service | Lines of Code | Description |
 |---------|---------------|-------------|
-| `service-catalog` | 28,526 | Product management, categories, collections, search |
-| `service-order` | 26,681 | Orders, payments, shipping, workflows |
-| `service-marketplace` | 14,421 | Shopee & TikTok integration, auto-sync |
-| `service-inventory` | 10,924 | Stock, warehouses, transfers, alerts |
-| `service-auth` | 8,428 | JWT authentication, sessions, roles |
-| `service-customer` | 7,625 | Customer profiles, addresses, CRM |
-| `service-agent` | 7,044 | Sales agents, commissions, agent orders |
-| `service-reporting` | 4,669 | Sales reports, analytics, exports |
-| `service-support` | 4,566 | Support tickets, customer inquiries |
-| `service-notification` | 2,276 | Email & message notifications |
+| `service-order` | ~30,000 | Orders, payments (Curlec FPX), multi-courier shipping, returns |
+| `service-catalog` | ~29,000 | Products, categories, flash sales, reviews, CMS, tailoring |
+| `service-marketplace` | ~17,000 | Shopee & TikTok integration, returns, stock reconciliation |
+| `service-inventory` | ~11,000 | Stock, warehouses, transfers, distributed locking |
+| `service-auth` | ~8,400 | JWT authentication, RBAC, 2FA (TOTP), activity logging |
+| `service-customer` | ~7,600 | Customer profiles, addresses, wishlist |
+| `service-agent` | ~7,000 | Sales agents, category commissions, team management (DDD) |
+| `service-reporting` | ~4,700 | Sales reports, analytics, CSV/PDF exports |
+| `service-support` | ~4,600 | Support tickets, canned responses (DDD) |
+| `service-notification` | ~2,300 | Email & message notifications |
+| `lib-common` | ~8,500 | Shared library (saga, outbox, resilience, telemetry) |
 
 ### Frontend — 4 Applications
 
 | Application | Lines of Code | Description |
 |-------------|---------------|-------------|
-| `frontend-admin` | 74,007 | Full admin panel |
-| `frontend-storefront` | 54,325 | Customer online store |
-| `frontend-agent` | 3,981 | Sales agent portal |
-| `frontend-warehouse` | 3,523 | Warehouse management |
+| `frontend-admin` | ~88,000 | Full admin panel with all management modules |
+| `frontend-storefront` | ~55,000 | Customer online store with search & checkout |
+| `frontend-agent` | ~4,000 | Sales agent portal |
+| `frontend-warehouse` | ~3,500 | Warehouse management |
 
 ### Infrastructure
 
 | Component | Count |
 |-----------|-------|
-| API Endpoints | 800+ |
-| Database Models | 254 |
+| Database Schemas | 16 |
+| Database Tables | 130+ |
 | Docker Containers | 21 |
-| Git Repositories | 22 |
-| PostgreSQL Schemas | `auth`, `catalog`, `inventory`, `sales`, `customer`, `agent`, `marketplace`, `support`, `reporting` |
+| Git Repositories | 19 |
+| E2E Test Files | 29 |
+| Supported Couriers | 16+ (via Parcel Daily) |
+
+---
+
+## Enterprise Architecture Patterns
+
+The platform implements enterprise-grade patterns in the shared library (`lib-common/`):
+
+| Pattern | Location | Purpose |
+|---------|----------|---------|
+| **Saga Orchestrator** | `lib-common/saga/` | Distributed transaction coordination with automatic compensation |
+| **Transactional Outbox** | `lib-common/outbox/` | Reliable event publishing with PostgreSQL-backed outbox table |
+| **Circuit Breaker** | `lib-common/resilience/` | Fault tolerance — closed/open/half-open states for external calls |
+| **Bulkhead** | `lib-common/resilience/` | Resource isolation to prevent cascade failures |
+| **Retry with Backoff** | `lib-common/resilience/` | Automatic retry with configurable backoff strategy |
+| **Distributed Lock** | `lib-common/lock/` | Redis-based mutual exclusion for critical sections |
+| **Event Sourcing** | `lib-common/eventsourcing/` | Domain event persistence with PostgreSQL store and NATS publisher |
+| **OpenTelemetry** | `lib-common/telemetry/` | Distributed tracing across HTTP, GORM, NATS with Jaeger export |
+| **Sentry Integration** | `lib-common/monitoring/` | Gin middleware for error capture and performance monitoring |
+
+```mermaid
+graph LR
+    subgraph Saga["Saga Pattern (Order Creation)"]
+        S1["Reserve Stock"] --> S2["Process Payment"] --> S3["Send Notification"]
+        S1 -->|"Fail → Compensate"| C1["Release Stock"]
+        S2 -->|"Fail → Compensate"| C2["Void Payment"]
+    end
+
+    subgraph CB["Circuit Breaker"]
+        CLOSED["Closed<br/>(Normal)"] -->|"Failures exceed threshold"| OPEN["Open<br/>(Fail Fast)"]
+        OPEN -->|"After timeout"| HALF["Half-Open<br/>(Test)"]
+        HALF -->|"Success"| CLOSED
+        HALF -->|"Failure"| OPEN
+    end
+
+    subgraph Outbox["Transactional Outbox"]
+        TX["DB Transaction"] --> OB["Write to Outbox Table"]
+        OB --> PROC["Outbox Processor"]
+        PROC --> PUBLISH["Publish to NATS"]
+    end
+```
 
 ---
 
 ## Database Design
 
-A single PostgreSQL database with 9 separate schemas — each microservice owns its own schema for data isolation (*schema-per-service pattern*).
+A single PostgreSQL database with **16 separate schemas** — each microservice owns its own schema for data isolation (*schema-per-service pattern*).
 
 ```mermaid
 graph TB
@@ -249,9 +357,9 @@ graph TB
         subgraph auth_schema["auth"]
             AU_1["users"]
             AU_2["sessions"]
-            AU_3["roles"]
-            AU_4["permissions"]
-            AU_5["password_resets"]
+            AU_3["roles & permissions"]
+            AU_4["two_factor_auth"]
+            AU_5["activity_logs"]
         end
 
         subgraph catalog_schema["catalog"]
@@ -259,19 +367,29 @@ graph TB
             CA_2["product_variants"]
             CA_3["categories"]
             CA_4["collections"]
-            CA_5["product_images"]
-            CA_6["price_lists"]
-            CA_7["product_tags"]
+            CA_5["flash_sales"]
+            CA_6["reviews"]
+            CA_7["fabric_designs & colors"]
+        end
+
+        subgraph cms_schema["cms"]
+            CM_1["pages"]
+            CM_2["looks"]
+            CM_3["newsletters"]
         end
 
         subgraph sales_schema["sales"]
             SA_1["orders"]
             SA_2["order_items"]
-            SA_3["payments"]
-            SA_4["shipments"]
-            SA_5["order_status_history"]
-            SA_6["refunds"]
-            SA_7["order_addresses"]
+            SA_3["shipments"]
+            SA_4["returns & return_items"]
+            SA_5["parceldaily_couriers"]
+            SA_6["shipping_profiles"]
+        end
+
+        subgraph payments_schema["payments"]
+            PA_1["payments"]
+            PA_2["refunds"]
         end
 
         subgraph inventory_schema["inventory"]
@@ -279,42 +397,42 @@ graph TB
             IN_2["stock_items"]
             IN_3["stock_movements"]
             IN_4["transfers"]
-            IN_5["stock_alerts"]
         end
 
         subgraph customer_schema["customer"]
             CU_1["customers"]
             CU_2["addresses"]
-            CU_3["customer_segments"]
-            CU_4["customer_tags"]
+            CU_3["segments & tags"]
         end
 
         subgraph agent_schema["agent"]
             AG_1["agents"]
-            AG_2["agent_tiers"]
-            AG_3["commissions"]
-            AG_4["agent_orders"]
-            AG_5["payouts"]
+            AG_2["commissions"]
+            AG_3["payouts"]
+            AG_4["category_commissions"]
+            AG_5["teams"]
         end
 
         subgraph marketplace_schema["marketplace"]
             MK_1["connections"]
             MK_2["marketplace_products"]
             MK_3["marketplace_orders"]
-            MK_4["marketplace_order_items"]
-            MK_5["sync_logs"]
+            MK_4["sync_logs"]
         end
 
         subgraph support_schema["support"]
             SU_1["tickets"]
             SU_2["ticket_replies"]
-            SU_3["ticket_categories"]
+            SU_3["canned_responses"]
         end
 
-        subgraph reporting_schema["reporting"]
-            RE_1["daily_sales"]
-            RE_2["product_analytics"]
-            RE_3["report_cache"]
+        subgraph analytics_schema["analytics"]
+            AN_1["daily_sales"]
+            AN_2["product_analytics"]
+        end
+
+        subgraph outbox_schema["outbox"]
+            OB_1["outbox_events"]
         end
     end
 
@@ -322,23 +440,26 @@ graph TB
     SA_1 -.->|"agent_id"| AG_1
     SA_2 -.->|"product_id"| CA_1
     SA_2 -.->|"variant_id"| CA_2
+    SA_4 -.->|"order_id"| SA_1
     IN_2 -.->|"variant_id"| CA_2
-    AG_3 -.->|"order_id"| SA_1
+    AG_2 -.->|"order_id"| SA_1
     MK_3 -.->|"internal_order_id"| SA_1
     MK_2 -.->|"internal_product_id"| CA_1
+    PA_1 -.->|"order_id"| SA_1
 ```
 
 ### Database Features
 
 | Feature | Description |
 |---------|-------------|
-| Schema-per-Service | Each service owns its own schema — clear data isolation |
+| Schema-per-Service | 16 schemas — clear data isolation per microservice |
 | Foreign Key Constraints | Cross-schema references for data integrity |
 | Check Constraints | DB-level validation (e.g., order amounts must be positive) |
 | Optimized Indexes | B-tree, GIN, and partial indexes for query performance |
 | UUID Primary Keys | Every record uses UUID v4 — safe for distributed systems |
 | Soft Deletes | Records are not deleted, only marked with `deleted_at` |
 | Audit Columns | `created_at`, `updated_at`, `created_by` on every table |
+| Transactional Outbox | Dedicated outbox schema for reliable event publishing |
 | GORM AutoMigrate | Automatic migration on service startup |
 
 ---
@@ -348,16 +469,21 @@ graph TB
 | Layer | Practice |
 |-------|----------|
 | **Authentication** | JWT (access + refresh token) with Redis sessions |
+| **Two-Factor Auth** | TOTP-based 2FA with QR code setup and backup codes |
 | **Passwords** | bcrypt hashing with cost factor 12 |
 | **Authorization** | Role-Based Access Control (RBAC) — 5 layered roles |
+| **Activity Logging** | Full audit trail of user actions |
 | **API Protection** | Auth middleware on all protected endpoints |
+| **Rate Limiting** | Redis-based rate limiting (10 req/min on auth endpoints) |
 | **OAuth Tokens** | Encrypted (AES-256) before storing in DB |
 | **CORS** | Strict configuration — only allowed domains |
 | **Input Validation** | Input validation on every handler (Gin binding) |
 | **SQL Injection** | Prevented by GORM parameterized queries |
-| **Rate Limiting** | Rate limits on sensitive endpoints |
 | **HTTPS** | SSL/TLS termination at Nginx (Let's Encrypt) |
 | **Env Secrets** | Secrets stored as env vars, not in code |
+| **Container Security** | `no-new-privileges`, `cap_drop: ALL` on all containers |
+| **Webhook Verification** | HMAC signature verification for marketplace webhooks |
+| **Distributed Locks** | Redis-based mutual exclusion for critical operations |
 
 ---
 
@@ -365,30 +491,45 @@ graph TB
 
 Key technical challenges solved during the development of this platform:
 
-### 1. Marketplace Order Sync with Shopee Discounts
-**Problem:** Shopee allows vouchers/discounts that make order totals lower than the item subtotal. This caused `shipping_cost` to become negative, violating a check constraint in PostgreSQL.
+### 1. Multi-Courier Rate Comparison
+**Problem:** Malaysian e-commerce needs flexible shipping — different couriers have different rates, coverage areas, and speeds. Manual comparison across 16 couriers is impractical.
+
+**Solution:** Integrated Parcel Daily API as a courier aggregator. The system queries all 16 couriers simultaneously for rate quotes, presents options sorted by price, and handles order creation + label generation + webhook tracking through a unified interface.
+
+### 2. Marketplace Order Sync with Shopee Discounts
+**Problem:** Shopee allows vouchers/discounts that make order totals lower than the item subtotal. This caused `shipping_cost` to become negative.
 
 **Solution:** Smart logic in `CreateMarketplaceOrder` — when `TotalAmount < subtotal`, the system calculates the difference as a `discount` and sets `shipping_cost = 0`, avoiding negative values.
 
-### 2. Event-Driven Architecture with NATS JetStream
-**Problem:** Services need to communicate asynchronously without tight coupling. For example: when an order is created, inventory needs to be updated and notifications need to be sent — without Order Service needing to know about both services.
+### 3. Returns & Refund State Machine
+**Problem:** Returns involve multiple states (pending, approved, rejected, shipped, received, refunded, exchanged) with different actors (customer, admin, warehouse) and stock implications at each step.
 
-**Solution:** Implemented NATS JetStream as the event bus. Each service publishes events, and other services subscribe independently. 22+ event types across the system.
+**Solution:** Implemented a state machine pattern in the order service with proper state transitions, validation at each step, automatic stock restoration when returns are received, and support for both refund and exchange outcomes.
 
-### 3. Shopee OAuth Token Expiry Management
+### 4. Enterprise Resilience with Saga Pattern
+**Problem:** Order creation spans multiple services (catalog validation, stock reservation, payment processing). If any step fails, previous steps must be rolled back.
+
+**Solution:** Implemented Saga Orchestrator pattern in `lib-common/saga/` with automatic compensation. Each step has an execute function and a compensate function. On failure, all completed steps are compensated in reverse order.
+
+### 5. Event-Driven Architecture with Transactional Outbox
+**Problem:** Publishing events to NATS after a database transaction risks data inconsistency — the DB commit succeeds but the event publish fails, or vice versa.
+
+**Solution:** Implemented Transactional Outbox pattern (`lib-common/outbox/`). Events are written to an outbox table within the same DB transaction, then a background processor publishes them to NATS and marks them as processed.
+
+### 6. Shopee OAuth Token Expiry Management
 **Problem:** Shopee OAuth tokens expire every 4 hours. If a token expires during auto-sync, all operations would fail.
 
-**Solution:** Background token manager that checks tokens every 5 minutes and automatically refreshes them 30 minutes before expiry — ensuring tokens are always active.
+**Solution:** Background token manager checking every 5 minutes, refreshing tokens 30 minutes before expiry to ensure continuous activation.
 
-### 4. SKU Matching Across Platforms
-**Problem:** Products on Shopee have different SKUs from the internal system. Shopee orders need to be linked to internal products for inventory tracking.
+### 7. SKU Matching Across Platforms
+**Problem:** Products on Shopee use different SKUs from the internal system. Shopee orders need linking to internal products for inventory tracking.
 
-**Solution:** SKU matching system in Marketplace Service that maps `external_sku` to `internal_product_id` during product sync, enabling stock tracking across all channels.
+**Solution:** SKU matching system mapping `external_sku` to `internal_product_id` during product sync, enabling stock tracking across channels.
 
-### 5. One Database, 9 Separate Schemas
-**Problem:** How to isolate data for 10 microservices without running 10 separate databases (too much overhead for a single VPS).
+### 8. One Database, 16 Separate Schemas
+**Problem:** How to isolate data for 10 microservices without running 10 databases (overhead on single VPS).
 
-**Solution:** Schema-per-service pattern — one PostgreSQL database with 9 separate schemas. Each service only accesses its own schema, but can still cross-reference via foreign keys when needed.
+**Solution:** Schema-per-service pattern — one PostgreSQL database with 16 schemas. Each service accesses only its schema with cross-reference capability.
 
 ---
 
@@ -399,18 +540,22 @@ graph LR
     subgraph Observability["Monitoring"]
         LOG["Structured Logging<br/>(Zap JSON)"]
         TRACE["Distributed Tracing<br/>(OpenTelemetry → Jaeger)"]
+        ERROR["Error Tracking<br/>(Sentry)"]
         HEALTH["Health Checks<br/>(/health endpoint)"]
     end
 
     subgraph Reliability["Reliability"]
         GRACEFUL["Graceful Shutdown<br/>(signal handling)"]
         RESTART["Auto-Restart<br/>(Docker restart policy)"]
-        RETRY["Retry Logic<br/>(HTTP clients)"]
+        CB["Circuit Breaker<br/>(fault tolerance)"]
+        RETRY["Retry Logic<br/>(exponential backoff)"]
+        LOCK["Distributed Lock<br/>(Redis-based)"]
     end
 
     subgraph Background["Background Processes"]
         TOKEN["Token Manager<br/>(every 5 min)"]
         SYNC["Order Auto-Sync<br/>(every 15 min)"]
+        OUTBOX["Outbox Processor<br/>(continuous)"]
         CACHE["Analytics Cache<br/>(Redis TTL)"]
     end
 ```
@@ -418,10 +563,13 @@ graph LR
 | Feature | Description |
 |---------|-------------|
 | **Structured Logging** | All services use Zap JSON logger — easy to search and analyze |
-| **Distributed Tracing** | OpenTelemetry + Jaeger — trace requests across all services |
+| **Distributed Tracing** | OpenTelemetry + Jaeger — trace requests across HTTP, GORM, NATS |
+| **Error Monitoring** | Sentry integration via Gin middleware — real-time error capture |
 | **Health Checks** | Every service exposes `/health` — Docker checks periodically |
 | **Graceful Shutdown** | Handles OS signals (SIGTERM/SIGINT) — completes active requests before shutting down |
 | **Auto-Restart** | Docker `restart: unless-stopped` — services recover automatically after failure |
+| **Circuit Breaker** | Prevents cascade failures when external services are down |
+| **Transactional Outbox** | Background processor ensures reliable event delivery |
 | **Background Schedulers** | Token refresh (5 min), order auto-sync (15 min), analytics cache |
 | **Error Recovery** | Retry logic on inter-service HTTP calls with exponential backoff |
 
@@ -431,7 +579,7 @@ graph LR
 
 ### 1. Authentication & Authorization
 
-The authentication system uses JWT with Redis sessions. Every request goes through middleware that validates the token and checks user roles.
+The authentication system uses JWT with Redis sessions and optional 2FA. Every request goes through middleware that validates the token and checks user roles.
 
 ```mermaid
 sequenceDiagram
@@ -452,10 +600,14 @@ sequenceDiagram
     end
 
     rect rgb(255, 243, 224)
-    Note over U,RD: Login
+    Note over U,RD: Login with 2FA
     U->>FE: Enter email & password
     FE->>AUTH: POST /auth/login
     AUTH->>DB: Validate credentials
+    AUTH-->>FE: 2FA required
+    U->>FE: Enter TOTP code
+    FE->>AUTH: POST /auth/2fa/verify
+    AUTH->>AUTH: Validate TOTP
     AUTH->>RD: Create new session
     AUTH-->>FE: JWT token + refresh token
     end
@@ -482,7 +634,7 @@ sequenceDiagram
 
 ### 2. Product Catalog
 
-Complete product management with variant support, images (MinIO), fast search (Meilisearch), and automatic marketplace sync.
+Complete product management with variant support, images (MinIO), AI background removal (Rembg), fast search (Meilisearch), flash sales, and automatic marketplace sync.
 
 ```mermaid
 sequenceDiagram
@@ -491,6 +643,7 @@ sequenceDiagram
     participant CAT as Catalog Service
     participant DB as PostgreSQL
     participant MIO as MinIO
+    participant REMBG as Rembg
     participant MS as Meilisearch
     participant NATS as NATS Event Bus
     participant MKT as Marketplace Service
@@ -500,6 +653,8 @@ sequenceDiagram
     A->>FE: Fill product info + upload images
     FE->>CAT: POST /products (multipart)
     CAT->>MIO: Store product images
+    CAT->>REMBG: Remove background (AI)
+    REMBG-->>CAT: Clean image
     MIO-->>CAT: Image URL
     CAT->>DB: Save product + variants + pricing
     CAT->>MS: Index to Meilisearch
@@ -510,20 +665,19 @@ sequenceDiagram
     end
 
     rect rgb(255, 243, 224)
-    Note over A,MS: Update Product
-    A->>FE: Edit info / pricing / stock
-    FE->>CAT: PUT /products/:id
-    CAT->>DB: Update record
-    CAT->>MS: Update search index
-    CAT->>NATS: Publish: product.updated
+    Note over A,MS: Flash Sale
+    A->>FE: Create flash sale (time + discount)
+    FE->>CAT: POST /flash-sales
+    CAT->>DB: Save flash sale rules
+    CAT->>MS: Update search index with sale pricing
     end
 
     rect rgb(230, 255, 230)
-    Note over A,DB: Bulk Operations
-    A->>FE: Upload CSV
-    FE->>CAT: POST /products/import
-    CAT->>DB: Bulk import products
-    CAT-->>FE: Import report (success/failed)
+    Note over A,DB: Content Management
+    A->>FE: Create CMS page / promotional look
+    FE->>CAT: POST /cms/pages or /looks
+    CAT->>DB: Save content
+    CAT-->>FE: Published
     end
 ```
 
@@ -551,7 +705,7 @@ sequenceDiagram
     P->>ST: Checkout cart
     ST->>ORD: POST /orders
     ORD->>CAT: Validate products & pricing
-    ORD->>INV: Deduct stock
+    ORD->>INV: Reserve stock (distributed lock)
     ORD->>NATS: Event: order.created
     ORD-->>ST: Order #KDM-20250208-001
     end
@@ -560,7 +714,7 @@ sequenceDiagram
     Note over AG,NATS: Channel 2: Agent Order
     AG->>ORD: POST /agent/orders
     ORD->>CAT: Validate products & agent pricing
-    ORD->>INV: Deduct stock
+    ORD->>INV: Reserve stock
     ORD->>NATS: Event: order.created
     ORD-->>AG: Order + commission calculated
     end
@@ -568,7 +722,7 @@ sequenceDiagram
     rect rgb(230, 255, 230)
     Note over AD,NATS: Channel 3: Manual Admin Order
     AD->>ORD: POST /admin/orders
-    ORD->>INV: Deduct stock
+    ORD->>INV: Reserve stock
     ORD->>NATS: Event: order.created
     end
 
@@ -577,7 +731,7 @@ sequenceDiagram
     SH-->>MKT: New order on Shopee
     MKT->>MKT: Auto-sync every 15 minutes
     MKT->>ORD: POST /orders/marketplace
-    ORD->>INV: Deduct stock
+    ORD->>INV: Reserve stock
     ORD->>NATS: Event: order.created
     end
 ```
@@ -586,7 +740,7 @@ sequenceDiagram
 
 ### 4. Order Lifecycle
 
-Every order goes through several statuses from start to completion. Status can be updated by admin, system, or marketplace.
+Every order goes through several statuses from start to completion, including returns.
 
 ```mermaid
 stateDiagram-v2
@@ -607,20 +761,106 @@ stateDiagram-v2
     delivered --> completed: Completed
     delivered --> return_requested: Customer requests return
 
-    return_requested --> returned: Items returned
-    returned --> refunded: Money refunded
+    return_requested --> return_approved: Admin approves
+    return_requested --> return_rejected: Admin rejects
+    return_approved --> return_shipped: Customer ships back
+    return_shipped --> return_received: Warehouse receives
+    return_received --> refunded: Money refunded
+    return_received --> exchanged: Item exchanged
 
     cancelled --> refunded: Money refunded (if already paid)
 
     completed --> [*]
     refunded --> [*]
+    exchanged --> [*]
+    return_rejected --> [*]
 ```
 
 ---
 
-### 5. Inventory & Warehouse
+### 5. Multi-Courier Shipping Flow
 
-Real-time stock management across multiple warehouses. Stock is deducted when orders are confirmed and restored when cancelled.
+Rate comparison across 16 couriers, label generation, and webhook tracking via Parcel Daily.
+
+```mermaid
+sequenceDiagram
+    participant AD as Admin
+    participant ORD as Order Service
+    participant PD as Parcel Daily API
+    participant WH as Webhook
+
+    rect rgb(230, 245, 255)
+    Note over AD,PD: 1. Get Shipping Rates
+    AD->>ORD: Ship Order #ORD-001
+    ORD->>PD: POST /v1/partner/merchant/quote
+    PD-->>ORD: Rates from 16 couriers
+    ORD-->>AD: DHL RM8.50, Flash RM6.00, J&T RM7.20...
+    end
+
+    rect rgb(255, 243, 224)
+    Note over AD,PD: 2. Create Shipment
+    AD->>ORD: Select Flash Express (RM6.00)
+    ORD->>PD: POST /v1/partner/order/create
+    PD-->>ORD: Order created
+    ORD->>PD: POST /v1/partner/order/pay
+    PD-->>ORD: AWB + Connote PDF + Thermal Label
+    ORD-->>AD: Print shipping label
+    end
+
+    rect rgb(230, 255, 230)
+    Note over ORD,WH: 3. Tracking Updates (Webhook)
+    WH->>ORD: POST /webhooks/parceldaily
+    ORD->>ORD: Update: pickup
+    WH->>ORD: POST /webhooks/parceldaily
+    ORD->>ORD: Update: in_transit
+    WH->>ORD: POST /webhooks/parceldaily
+    ORD->>ORD: Update: delivered
+    end
+```
+
+---
+
+### 6. Payment Flow
+
+Multiple payment methods with automated and manual verification.
+
+```mermaid
+sequenceDiagram
+    participant P as Customer
+    participant ST as Storefront
+    participant ORD as Order Service
+    participant CURLEC as Curlec FPX
+    participant AD as Admin
+
+    rect rgb(230, 245, 255)
+    Note over P,CURLEC: Path A: Online Banking (Curlec FPX)
+    P->>ST: Select FPX payment
+    ST->>ORD: POST /payments/fpx
+    ORD->>CURLEC: Create FPX transaction
+    CURLEC-->>P: Redirect to bank
+    P->>CURLEC: Authorize payment
+    CURLEC->>ORD: Webhook: payment.success
+    ORD->>ORD: Auto-confirm order
+    end
+
+    rect rgb(255, 243, 224)
+    Note over P,AD: Path B: Bank Transfer (Manual)
+    P->>ST: Select bank transfer
+    ST->>ORD: POST /payments/bank-transfer
+    ORD-->>P: Bank details + reference number
+    P->>P: Transfer money via banking app
+    P->>ST: Upload payment receipt
+    ST->>ORD: POST /payments/:id/receipt
+    AD->>ORD: Verify receipt & confirm
+    ORD->>ORD: Confirm order
+    end
+```
+
+---
+
+### 7. Inventory & Warehouse
+
+Real-time stock management across multiple warehouses with distributed locking.
 
 ```mermaid
 sequenceDiagram
@@ -628,15 +868,17 @@ sequenceDiagram
     participant NATS as NATS Event Bus
     participant INV as Inventory Service
     participant DB as PostgreSQL
+    participant RD as Redis
     participant MKT as Marketplace Service
     participant SH as Shopee
 
     rect rgb(230, 245, 255)
-    Note over ORD,DB: Deduct Stock (Order Confirmed)
-    ORD->>NATS: Event: order.confirmed
-    NATS-->>INV: Receive event
-    INV->>DB: Deduct variant stock from warehouse
+    Note over ORD,RD: Stock Reservation (Order Created)
+    ORD->>RD: Acquire distributed lock
+    ORD->>INV: Reserve stock for order
+    INV->>DB: Deduct available, increase reserved
     INV->>DB: Record stock movement
+    ORD->>RD: Release lock
     INV->>NATS: Event: inventory.stock.changed
     NATS-->>MKT: Receive event
     MKT->>SH: Update stock on Shopee
@@ -646,7 +888,7 @@ sequenceDiagram
     Note over ORD,DB: Restore Stock (Order Cancelled)
     ORD->>NATS: Event: order.cancelled
     NATS-->>INV: Receive event
-    INV->>DB: Restore variant stock
+    INV->>DB: Restore reserved stock
     INV->>DB: Record stock movement
     INV->>NATS: Event: inventory.stock.changed
     end
@@ -668,9 +910,9 @@ sequenceDiagram
 
 ---
 
-### 6. Marketplace Integration — Shopee & TikTok
+### 8. Marketplace Integration — Shopee & TikTok
 
-Full integration with Shopee Open Platform and TikTok Shop API including OAuth, product sync, automatic orders, and token management.
+Full integration including OAuth, product sync, automatic orders, returns processing, stock reconciliation, and token management.
 
 ```mermaid
 sequenceDiagram
@@ -679,7 +921,6 @@ sequenceDiagram
     participant MKT as Marketplace Service
     participant SH as Shopee API
     participant DB as PostgreSQL
-    participant RD as Redis
     participant ORD as Order Service
 
     rect rgb(230, 245, 255)
@@ -690,7 +931,7 @@ sequenceDiagram
     FE->>SH: Redirect to Shopee login
     SH-->>MKT: Callback with auth code
     MKT->>SH: Exchange code → access token
-    MKT->>DB: Store token (encrypted)
+    MKT->>DB: Store token (AES-256 encrypted)
     end
 
     rect rgb(255, 243, 224)
@@ -698,8 +939,8 @@ sequenceDiagram
     A->>FE: Click "Sync Products"
     FE->>MKT: POST /connections/:id/sync/products
     MKT->>SH: GET /product/get_item_list
-    MKT->>DB: Save/update products
-    MKT-->>FE: 150 products synced
+    MKT->>DB: Save/update products (SKU matching)
+    MKT-->>FE: Products synced
     end
 
     rect rgb(230, 255, 230)
@@ -711,73 +952,23 @@ sequenceDiagram
         MKT->>DB: Save to marketplace DB
         MKT->>ORD: POST /orders/marketplace
         ORD-->>MKT: Internal Order ID
-        MKT->>DB: Save internal_order_id
+        MKT->>DB: Link marketplace → internal order
     end
     end
 
     rect rgb(255, 230, 255)
-    Note over MKT,RD: Auto-Refresh Token (Every 5 Minutes)
-    MKT->>MKT: Token manager check
-    MKT->>DB: Find tokens nearing expiry
-    MKT->>SH: POST /auth/token/get (refresh)
-    MKT->>DB: Update new token
+    Note over MKT,DB: Returns & Stock Reconciliation
+    MKT->>SH: GET /returns (sync marketplace returns)
+    MKT->>MKT: Stock reconciliation check
+    MKT->>DB: Flag discrepancies for resolution
     end
 ```
 
 ---
 
-### 7. Customer & CRM (Customer Management)
+### 9. Agent Commission Flow
 
-Customer data management from multiple channels — storefront, agents, and manual admin entry.
-
-```mermaid
-sequenceDiagram
-    participant P as Customer
-    participant ST as Storefront
-    participant AD as Admin Panel
-    participant CUST as Customer Service
-    participant DB as PostgreSQL
-    participant ORD as Order Service
-
-    rect rgb(230, 245, 255)
-    Note over P,DB: Customer Registration
-    P->>ST: Register new account
-    ST->>CUST: POST /customers/register
-    CUST->>DB: Create customer profile
-    CUST-->>ST: Account created
-    end
-
-    rect rgb(255, 243, 224)
-    Note over P,DB: Address Management
-    P->>ST: Add shipping address
-    ST->>CUST: POST /customers/:id/addresses
-    CUST->>DB: Save address
-    P->>ST: Set default address
-    ST->>CUST: PUT /customers/:id/addresses/:aid/default
-    end
-
-    rect rgb(230, 255, 230)
-    Note over AD,ORD: CRM — Customer History
-    AD->>CUST: GET /admin/customers/:id
-    CUST->>DB: Profile + addresses + segments + tags
-    AD->>ORD: GET /admin/orders?customer_id=xxx
-    ORD-->>AD: Customer order history
-    AD->>AD: Complete customer view
-    end
-
-    rect rgb(255, 230, 255)
-    Note over AD,DB: Bulk Import
-    AD->>CUST: POST /admin/customers/import (CSV)
-    CUST->>DB: Bulk import customers
-    CUST-->>AD: Import report
-    end
-```
-
----
-
-### 8. Sales Agent System
-
-Sales agents register through admin and can place orders on behalf of customers. Commissions are calculated automatically.
+Sales agents register through admin, place orders, and earn category-specific commissions.
 
 ```mermaid
 sequenceDiagram
@@ -788,11 +979,11 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     rect rgb(230, 245, 255)
-    Note over AD,DB: Register & Manage Agents
-    AD->>AGT: POST /admin/agents (register new agent)
-    AGT->>DB: Create agent profile + commission rate
-    AD->>AGT: PUT /admin/agents/:id/tier (set tier)
-    AGT->>DB: Update tier & rate
+    Note over AD,DB: Register & Configure Agent
+    AD->>AGT: POST /admin/agents (register)
+    AGT->>DB: Create agent profile + tier
+    AD->>AGT: POST /admin/agents/:id/category-commissions
+    AGT->>DB: Set per-category commission rates
     end
 
     rect rgb(255, 243, 224)
@@ -800,20 +991,16 @@ sequenceDiagram
     AGP->>AGT: POST /agent/orders
     AGT->>ORD: Create order (source: agent)
     ORD-->>AGT: Order ID
-    AGT->>DB: Calculate commission automatically
+    AGT->>DB: Calculate category-based commission
     AGT->>DB: Record commission (pending)
     AGT-->>AGP: Order + commission calculated
     end
 
     rect rgb(230, 255, 230)
-    Note over AD,DB: Agent Performance Report
+    Note over AD,DB: Commission Payouts
     AD->>AGT: GET /admin/agents/:id/performance
     AGT->>DB: Total sales, commissions, orders
     AGT-->>AD: Agent performance dashboard
-    end
-
-    rect rgb(255, 230, 255)
-    Note over AD,DB: Pay Commissions
     AD->>AGT: POST /admin/commissions/batch-pay
     AGT->>DB: Update status: pending → paid
     end
@@ -821,9 +1008,9 @@ sequenceDiagram
 
 ---
 
-### 9. Support Tickets
+### 10. Support Tickets
 
-Ticket system for managing customer inquiries and complaints.
+Ticket system for managing customer inquiries and complaints with canned responses.
 
 ```mermaid
 sequenceDiagram
@@ -846,7 +1033,7 @@ sequenceDiagram
     AD->>SUP: GET /admin/tickets (list tickets)
     SUP-->>AD: List of open tickets
     AD->>SUP: POST /admin/tickets/:id/replies
-    SUP->>DB: Save reply + update status
+    SUP->>DB: Save reply (or use canned response)
     SUP->>DB: Status: open → in_progress
     end
 
@@ -862,7 +1049,7 @@ sequenceDiagram
 
 ---
 
-### 10. Reports & Analytics
+### 11. Reports & Analytics
 
 Real-time analytics dashboard for monitoring business performance.
 
@@ -870,18 +1057,17 @@ Real-time analytics dashboard for monitoring business performance.
 sequenceDiagram
     participant AD as Admin Panel
     participant RPT as Reporting Service
-    participant ORD as Order Service
-    participant INV as Inventory Service
-    participant AGT as Agent Service
     participant DB as PostgreSQL
+    participant RD as Redis
 
     rect rgb(230, 245, 255)
-    Note over AD,DB: Main Dashboard
+    Note over AD,RD: Main Dashboard
     AD->>RPT: GET /admin/dashboard
+    RPT->>RD: Check cache
     RPT->>DB: Sales today / week / month
     RPT->>DB: Orders by status
     RPT->>DB: Best-selling products
-    RPT->>DB: New customer count
+    RPT->>RD: Cache results
     RPT-->>AD: Complete dashboard data
     end
 
@@ -897,15 +1083,15 @@ sequenceDiagram
     Note over AD,DB: Data Export
     AD->>RPT: GET /admin/reports/export?format=csv
     RPT->>DB: Generate report data
-    RPT-->>AD: CSV file downloaded
+    RPT-->>AD: CSV/PDF file downloaded
     end
 ```
 
 ---
 
-### 11. Inter-Service Communication
+### 12. Inter-Service Communication
 
-Complete communication map between all microservices via NATS Event Bus and direct HTTP calls.
+Complete communication map between all microservices via NATS Event Bus, transactional outbox, and direct HTTP calls.
 
 ```mermaid
 graph TB
@@ -920,8 +1106,8 @@ graph TB
         E7["product.deleted"]
         E8["inventory.stock.changed"]
         E9["inventory.low_stock"]
-        E10["inventory.transfer.completed"]
-        E11["customer.registered"]
+        E10["shipping.status.updated"]
+        E11["return.requested"]
         E12["payment.received"]
     end
 
@@ -941,8 +1127,8 @@ graph TB
 
     ORD_P -->|order.*| E1 & E2 & E3 & E4
     CAT_P -->|product.*| E5 & E6 & E7
-    INV_P -->|inventory.*| E8 & E9 & E10
-    CUST_P -->|customer.*| E11
+    INV_P -->|inventory.*| E8 & E9
+    ORD_P -->|shipping/return| E10 & E11
 
     E2 & E3 -->|stock| INV_S
     E5 & E6 & E7 -->|product sync| MKT_S
@@ -961,10 +1147,14 @@ graph LR
     AGT["Agent Service"]
     MKT["Marketplace Service"]
     CUST["Customer Service"]
+    PD["Parcel Daily"]
+    CURLEC["Curlec FPX"]
 
     ORD -->|"Validate products & pricing"| CAT
-    ORD -->|"Deduct/restore stock"| INV
+    ORD -->|"Reserve/restore stock"| INV
     ORD -->|"Validate customer"| CUST
+    ORD -->|"Ship order"| PD
+    ORD -->|"Process payment"| CURLEC
     AGT -->|"Create agent order"| ORD
     MKT -->|"Create marketplace order"| ORD
     MKT -->|"Match SKU → product"| CAT
@@ -973,27 +1163,29 @@ graph LR
 
 ---
 
-### 12. User Flow — Online Store (Storefront User Journey)
-
-Complete user journey from browsing the store to order completion.
+### 13. User Flow — Online Store (Storefront)
 
 ```mermaid
 graph TB
     subgraph Browsing["Store Browsing"]
         HOME["Home Page"] --> BROWSE["Browse Categories"]
-        HOME --> SEARCH["Product Search"]
-        HOME --> COLL["View Collections"]
+        HOME --> SEARCH["Product Search<br/>(Meilisearch)"]
+        HOME --> COLL["Collections"]
+        HOME --> FLASH["Flash Sales"]
         BROWSE --> PDP["Product Page"]
         SEARCH --> PDP
         COLL --> PDP
+        FLASH --> PDP
     end
 
     subgraph Purchase["Purchase Process"]
+        PDP --> REVIEW["Read Reviews"]
+        PDP --> TAILOR["Tailoring Options"]
         PDP --> VARIANT["Select Variant & Quantity"]
         VARIANT --> CART["Add to Cart"]
         CART --> CHECKOUT["Checkout"]
         CHECKOUT --> ADDRESS["Select Address"]
-        ADDRESS --> PAY["Payment"]
+        ADDRESS --> PAY["Payment<br/>(FPX / Bank Transfer)"]
         PAY --> CONFIRM["Order Confirmation"]
     end
 
@@ -1003,12 +1195,14 @@ graph TB
         ADDR_MGMT["Manage Addresses"]
         ORDER_HIST["Order History"]
         TRACK["Track Order"]
+        RETURN["Request Return"]
         TICKET["Open Support Ticket"]
 
         LOGIN --> PROFILE
         PROFILE --> ADDR_MGMT
         PROFILE --> ORDER_HIST
         ORDER_HIST --> TRACK
+        ORDER_HIST --> RETURN
         ORDER_HIST --> TICKET
     end
 
@@ -1017,9 +1211,7 @@ graph TB
 
 ---
 
-### 13. User Flow — Admin Panel (Admin Dashboard Journey)
-
-Overview of all modules in the admin panel that manage every aspect of the business.
+### 14. User Flow — Admin Panel
 
 ```mermaid
 graph TB
@@ -1032,18 +1224,32 @@ graph TB
         PROD_ADD["Add Product"]
         PROD_EDIT["Edit Product & Variants"]
         CAT_MGMT["Categories & Collections"]
+        FLASH_MGMT["Flash Sales"]
+        REVIEW_MOD["Review Moderation"]
         PROD_LIST --> PROD_ADD
         PROD_LIST --> PROD_EDIT
         PROD_LIST --> CAT_MGMT
+        PROD_LIST --> FLASH_MGMT
+        PROD_LIST --> REVIEW_MOD
+    end
+
+    subgraph Content["Content Management"]
+        CMS_PAGES["CMS Pages"]
+        LOOKS["Promotional Looks"]
+        NEWSLETTER["Newsletter"]
     end
 
     subgraph Orders["Order Management"]
         ORD_LIST["Order List"]
         ORD_DETAIL["Order Details"]
         ORD_STATUS["Update Status"]
+        ORD_SHIP["Ship Order (16 Couriers)"]
+        ORD_RETURN["Process Returns"]
         ORD_MANUAL["Create Manual Order"]
         ORD_LIST --> ORD_DETAIL
         ORD_DETAIL --> ORD_STATUS
+        ORD_DETAIL --> ORD_SHIP
+        ORD_DETAIL --> ORD_RETURN
         ORD_LIST --> ORD_MANUAL
     end
 
@@ -1071,24 +1277,32 @@ graph TB
         MKT_CONN["Shopee/TikTok Connections"]
         MKT_PROD["Product Sync"]
         MKT_ORD["Order Sync"]
+        MKT_RETURN["Returns Processing"]
+        MKT_RECON["Stock Reconciliation"]
         MKT_ANALYTICS["Marketplace Analytics"]
         MKT_CONN --> MKT_PROD
         MKT_CONN --> MKT_ORD
+        MKT_CONN --> MKT_RETURN
+        MKT_CONN --> MKT_RECON
         MKT_CONN --> MKT_ANALYTICS
     end
 
     subgraph Agents["Agent Management"]
         AGT_LIST["Agent List"]
         AGT_COMM["Commissions & Payments"]
+        AGT_CAT_COMM["Category Commission Rates"]
         AGT_PERF["Agent Performance"]
+        AGT_TEAM["Team Management"]
         AGT_LIST --> AGT_COMM
+        AGT_LIST --> AGT_CAT_COMM
         AGT_LIST --> AGT_PERF
+        AGT_LIST --> AGT_TEAM
     end
 
     subgraph Reports["Reports & Analytics"]
         RPT_SALES["Daily/Monthly Sales"]
         RPT_PRODUCT["Product Performance"]
-        RPT_EXPORT["CSV Export"]
+        RPT_EXPORT["CSV/PDF Export"]
         RPT_SALES --> RPT_EXPORT
         RPT_PRODUCT --> RPT_EXPORT
     end
@@ -1100,6 +1314,7 @@ graph TB
     end
 
     DASH --> Products
+    DASH --> Content
     DASH --> Orders
     DASH --> Inventory
     DASH --> Customers
@@ -1111,6 +1326,27 @@ graph TB
 
 ---
 
+## E2E Testing
+
+Comprehensive end-to-end testing with **Playwright** covering all service domains:
+
+| Domain | Test Files | Coverage |
+|--------|-----------|----------|
+| **Auth** | 4 files | Login, registration, RBAC enforcement, admin operations |
+| **Catalog** | 5 files | Products, categories, CMS, search, admin operations |
+| **Order** | 8 files | Cart, checkout, lifecycle, payment, shipping, returns, admin ops |
+| **Customer** | 2 files | Profile management, admin operations |
+| **Inventory** | 2 files | Stock operations, admin operations |
+| **Marketplace** | 2 files | Connections, product/order sync |
+| **Agent** | 1 file | Agent CRUD, commissions |
+| **Reporting** | 1 file | Sales reports |
+| **Support** | 1 file | Support tickets |
+| **Cross-Service** | 3 files | Full purchase flow, RBAC enforcement, returns |
+
+**29 test files** | **~4,600 lines** | **10 service domains** | Rate-limit handling & retry logic built-in
+
+---
+
 ## Deployment
 
 All services run in Docker containers on a single VPS with Docker Compose configuration.
@@ -1118,26 +1354,30 @@ All services run in Docker containers on a single VPS with Docker Compose config
 ```
   Production Infrastructure
   ════════════════════════════════════════
-  Server         : 1x VPS (Linux)
+  Server         : 1x VPS (4GB RAM, 2vCPU)
   Containers     : 21 Docker containers
   Orchestration  : Docker Compose
   Reverse Proxy  : Nginx + SSL (Let's Encrypt)
-  Database       : PostgreSQL 16 (9 schemas)
+  Database       : PostgreSQL 16 (16 schemas)
   Cache          : Redis 7
   Search         : Meilisearch
   Event Bus      : NATS JetStream
   Object Storage : MinIO
+  Image AI       : Rembg (background removal)
   Tracing        : Jaeger + OpenTelemetry
+  Monitoring     : Sentry (error tracking)
 ```
 
 | Operational Feature | Description |
 |---------------------|-------------|
+| Container Security | `no-new-privileges`, `cap_drop: ALL` on all containers |
 | Health Checks | Every service exposes `/health` — Docker checks periodically |
 | Structured Logging | JSON logging (Zap) — easy to search and debug |
 | Distributed Tracing | OpenTelemetry → Jaeger — trace requests across services |
+| Error Monitoring | Sentry — real-time error capture and alerting |
 | Graceful Shutdown | Signal handling (SIGTERM) — completes requests before shutting down |
 | Auto-Restart | `restart: unless-stopped` — recovers automatically after failure |
-| Background Jobs | Token refresh (5 min), order sync (15 min), analytics cache |
+| Background Jobs | Token refresh (5 min), order sync (15 min), outbox processor |
 
 ---
 
