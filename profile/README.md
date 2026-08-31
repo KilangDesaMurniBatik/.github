@@ -7,9 +7,9 @@
 *Full-stack e-commerce platform powering a traditional Malaysian batik factory's digital operations*
 
 [![Services](https://img.shields.io/badge/Microservices-10-blue)]()
-[![Frontend](https://img.shields.io/badge/Frontend_Apps-4-green)]()
+[![Frontend](https://img.shields.io/badge/Frontend_Apps-3-green)]()
 [![Code](https://img.shields.io/badge/Lines_of_Code-285K+-orange)]()
-[![Docker](https://img.shields.io/badge/Docker_Containers-21-red)]()
+[![Repos](https://img.shields.io/badge/Repositories-19-red)]()
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)]()
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)]()
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)]()
@@ -30,7 +30,23 @@
 | **Scope** | Architecture design, backend & frontend development, database design, external API integration, DevOps & deployment, infrastructure management |
 | **Location** | Terengganu, Malaysia |
 
-> This entire platform — from designing the microservices architecture, developing 10 backend services in Go, 4 frontend apps in Next.js/TypeScript, designing 16 database schemas with 130+ tables, integrating Shopee, TikTok & Parcel Daily APIs, implementing enterprise patterns (Saga, Circuit Breaker, Event Sourcing), to deploying 21 Docker containers in production — was built entirely solo by a single developer.
+> This entire platform — from designing the microservices architecture, developing 10 backend services in Go, 3 frontend apps in Next.js/TypeScript, designing 17 database schemas with 135 tables, integrating Shopee, TikTok & Parcel Daily APIs, implementing enterprise patterns (Saga, Circuit Breaker, Event Sourcing), to running 21 Docker containers on a production VPS — was built entirely solo by a single developer.
+
+---
+
+## Status — as of 2026
+
+| | |
+|---|---|
+| **Built** | 2023–2026, for Kilang Desa Murni Batik |
+| **Ran in production** | On a single VPS, serving the factory's retail, wholesale and marketplace operations |
+| **Today** | The production VPS is **retired**. The platform is no longer serving live traffic |
+| **The code** | Actively maintained. Runs end to end on a local development stack — schema loaded, services from source, storefront and admin against them |
+| **What is current** | The database definition (17 schemas, 135 tables, 73 foreign keys), all 10 services, 3 frontends and the shared libraries |
+| **What is archived** | The VPS deployment scripts, backup cron and TLS setup in `infra-platform`, kept for reference |
+
+Everything below describes the system as designed and built. Where it says a service *does* something, that is
+what the code does — verified by running it, not by memory of the production deployment.
 
 ---
 
@@ -38,7 +54,7 @@
 
 Kilang Desa Murni Batik is an end-to-end digital platform that connects a traditional batik factory with modern buyers. The system manages all business operations — from product catalog management with flash sales and CMS content, order processing with multi-courier shipping (16 couriers via Parcel Daily), inventory tracking across warehouses, marketplace integration with Shopee and TikTok Shop, to customer support with ticketing and returns/refund workflows.
 
-Built from scratch using a **microservices architecture** with 10 backend services, 4 frontend apps, enterprise-grade patterns (Saga, Outbox, Circuit Breaker), and 21 Docker containers in production.
+Built from scratch using a **microservices architecture** with 10 backend services, 3 frontend apps, and enterprise-grade patterns (Saga, Outbox, Circuit Breaker). It ran on 21 Docker containers on a single VPS until that deployment was retired in 2026.
 
 ---
 
@@ -285,22 +301,25 @@ graph LR
 | `service-notification` | ~2,300 | Email & message notifications |
 | `lib-common` | ~8,500 | Shared library (saga, outbox, resilience, telemetry) |
 
-### Frontend — 4 Applications
+### Frontend — 3 Applications
 
 | Application | Lines of Code | Description |
 |-------------|---------------|-------------|
 | `frontend-admin` | ~88,000 | Full admin panel with all management modules |
-| `frontend-storefront` | ~55,000 | Customer online store with search & checkout |
-| `frontend-agent` | ~4,000 | Sales agent portal |
+| `frontend-storefront` | ~55,000 | Customer online store with search & checkout, and the sales agent portal |
 | `frontend-warehouse` | ~3,500 | Warehouse management |
+
+The sales agent portal was once its own app. It now lives inside the storefront under `/account`
+(order wizard, commissions, customers), with its components shared through `lib-ui/src/agent/`.
 
 ### Infrastructure
 
 | Component | Count |
 |-----------|-------|
-| Database Schemas | 16 |
-| Database Tables | 130+ |
-| Docker Containers | 21 |
+| Database Schemas | 17 |
+| Database Tables | 135 |
+| Foreign Keys | 73 |
+| Docker Containers | 21 (on the retired VPS) |
 | Git Repositories | 19 |
 | E2E Test Files | 29 |
 | Supported Couriers | 16+ (via Parcel Daily) |
@@ -1349,10 +1368,13 @@ Comprehensive end-to-end testing with **Playwright** covering all service domain
 
 ## Deployment
 
-All services run in Docker containers on a single VPS with Docker Compose configuration.
+### How it ran in production — 2023 to 2026, now retired
+
+All services ran in Docker containers on a single VPS with Docker Compose. That deployment has been shut down;
+the scripts remain in `infra-platform` for reference.
 
 ```
-  Production Infrastructure
+  Production Infrastructure (retired)
   ════════════════════════════════════════
   Server         : 1x VPS (4GB RAM, 2vCPU)
   Containers     : 21 Docker containers
@@ -1378,6 +1400,13 @@ All services run in Docker containers on a single VPS with Docker Compose config
 | Graceful Shutdown | Signal handling (SIGTERM) — completes requests before shutting down |
 | Auto-Restart | `restart: unless-stopped` — recovers automatically after failure |
 | Background Jobs | Token refresh (5 min), order sync (15 min), outbox processor |
+
+### How it runs today
+
+The platform runs end to end on a local development stack — PostgreSQL, Redis, NATS, MinIO and Meilisearch in
+containers, the ten services from source, and nginx in front on `:8080` routing `/api/v1/…` to the right
+service using the same routing table the VPS used. The storefront lists the catalogue and checkout completes
+through it.
 
 ---
 
