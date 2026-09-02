@@ -1,14 +1,14 @@
 <div align="center">
 
-# Kilang Desa Murni Batik
+# Niaga
 
-**Complete E-Commerce Platform for Malaysian Batik**
+**E-commerce platform behind a factory-direct dropship store**
 
-*Full-stack e-commerce platform powering a traditional Malaysian batik factory's digital operations*
+*Ten Go services, three Next.js apps and one Postgres database. Built solo, 2023-2026.*
 
 [![Services](https://img.shields.io/badge/Microservices-10-blue)]()
 [![Frontend](https://img.shields.io/badge/Frontend_Apps-3-green)]()
-[![Code](https://img.shields.io/badge/Lines_of_Code-285K+-orange)]()
+[![Code](https://img.shields.io/badge/Lines_of_Code-288K-orange)]()
 [![Repos](https://img.shields.io/badge/Repositories-19-red)]()
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)]()
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)]()
@@ -30,7 +30,7 @@
 | **Scope** | Architecture design, backend & frontend development, database design, external API integration, DevOps & deployment, infrastructure management |
 | **Location** | Terengganu, Malaysia |
 
-> This entire platform — from designing the microservices architecture, developing 10 backend services in Go, 3 frontend apps in Next.js/TypeScript, designing 17 database schemas with 135 tables, integrating Shopee, TikTok & Parcel Daily APIs, implementing enterprise patterns (Saga, Circuit Breaker, Event Sourcing), to running 21 Docker containers on a production VPS — was built entirely solo by a single developer.
+> This entire platform — from designing the microservices architecture, developing 10 backend services in Go, 3 frontend apps in Next.js/TypeScript, designing 17 database schemas with 132 tables, integrating Shopee, TikTok & Parcel Daily APIs, implementing enterprise patterns (Saga, Circuit Breaker, Event Sourcing), to running 21 Docker containers on a production VPS — was built entirely solo by a single developer.
 
 ---
 
@@ -38,23 +38,48 @@
 
 | | |
 |---|---|
-| **Built** | 2023–2026, for Kilang Desa Murni Batik |
-| **Ran in production** | On a single VPS, serving the factory's retail, wholesale and marketplace operations |
+| **Built** | 2023–2026, as *Desa Murni Batik*, for a batik factory in Terengganu. Renamed **Niaga** in 2026 when the product became a general e-commerce platform |
+| **Ran in production** | On a single VPS, serving the factory's retail and marketplace operations |
 | **Today** | The production VPS is **retired**. The platform is no longer serving live traffic |
 | **The code** | Actively maintained. Runs end to end on a local development stack — schema loaded, services from source, storefront and admin against them |
-| **What is current** | The database definition (17 schemas, 135 tables, 73 foreign keys), all 10 services, 3 frontends and the shared libraries |
+| **What is current** | The database definition (17 schemas, 132 tables, 3 views, 73 foreign keys), all 10 services, 3 frontends and the shared libraries |
 | **What is archived** | The VPS deployment scripts, backup cron and TLS setup in `infra-platform`, kept for reference |
 
 Everything below describes the system as designed and built. Where it says a service *does* something, that is
 what the code does — verified by running it, not by memory of the production deployment.
 
+### What is **not** built
+
+Older versions of this page implied more than the code supports. For the record:
+
+| Claim you might expect | Reality |
+|---|---|
+| Wholesale / tiered pricing | **Not built.** A couple of frontend pages mention it; there is no backend for it |
+| Multi-branch / multi-outlet | **Not built.** Stock is per warehouse, and phase 1 runs a single warehouse |
+| Push notifications | **Not built.** `service-notification` is a JetStream consumer with no HTTP API |
+| SMS | **Stub by default.** The Twilio path exists but ships disabled |
+| Warehouse picking app | **A mock.** `frontend-warehouse` has mock login and 4 of its 6 API modules are fixtures |
+| Lazada | **In progress.** Shopee and TikTok Shop are the two that are built |
+| Sales agents & commissions | **Legacy**, kept behind a flag and off by default — see the note in Key Features |
+| Live production deployment | **Retired.** The VPS is gone; the platform runs on a local stack |
+
 ---
 
 ## About the Project
 
-Kilang Desa Murni Batik is an end-to-end digital platform that connects a traditional batik factory with modern buyers. The system manages all business operations — from product catalog management with flash sales and CMS content, order processing with multi-courier shipping (16 couriers via Parcel Daily), inventory tracking across warehouses, marketplace integration with Shopee and TikTok Shop, to customer support with ticketing and returns/refund workflows.
+Niaga is an end-to-end e-commerce platform: catalog management with flash sales and CMS content, order
+processing with multi-courier shipping, stock tracking, marketplace integration with Shopee and TikTok Shop,
+and customer support with ticketing and returns/refund workflows.
 
-Built from scratch using a **microservices architecture** with 10 backend services, 3 frontend apps, and enterprise-grade patterns (Saga, Outbox, Circuit Breaker). It ran on 21 Docker containers on a single VPS until that deployment was retired in 2026.
+It was built 2023–2026 as *Desa Murni Batik*, the digital operations of one Malaysian batik factory. The
+apparel-specific parts — fabric designs, tailoring, body measurements, size guides — are still in the code and
+now sit behind a feature flag, off by default, so the platform sells any product type. It is being pointed at
+our own factory-direct dropship store first; selling the platform to other companies is parked until that
+store has real sales.
+
+Built from scratch as a **microservices architecture**: 10 backend services, 3 frontend apps, and
+enterprise-grade patterns (Saga, Outbox, Circuit Breaker). It ran on 21 Docker containers on a single VPS
+until that deployment was retired in 2026.
 
 ---
 
@@ -87,7 +112,7 @@ graph TB
     end
 
     subgraph Infrastructure["Infrastructure"]
-        PG[("PostgreSQL<br/>16 Schemas")]
+        PG[("PostgreSQL<br/>17 Schemas")]
         RD[("Redis<br/>Cache & Locks")]
         NATS["NATS<br/>Event Bus"]
         MINIO["MinIO<br/>Object Storage"]
@@ -144,12 +169,12 @@ graph TB
 | Flash Sales | Create and manage time-limited promotional campaigns |
 | CMS Pages | Content management system for public and admin pages |
 | Returns Processing | Approve/reject returns, track refund/exchange status |
-| Multi-Courier Shipping | Compare rates across 16 couriers, generate shipping labels |
+| Multi-Courier Shipping | Compare rates across the couriers Parcel Daily quotes, generate shipping labels |
 | Inventory | Real-time stock tracking, low stock alerts, warehouse transfers |
 | Customers & CRM | Customer list, purchase history, segmentation |
-| Reports & Analytics | Daily/monthly sales, best-selling products, agent performance |
+| Reports & Analytics | Daily/monthly sales, best-selling products |
 | Shopee & TikTok Integration | Connect stores, auto-sync products, orders & stock |
-| Agent Management | Register agents, set commissions by category, track performance |
+| Agent Management *(legacy)* | Register agents, set commissions by category, track performance — behind a flag, off by default |
 | Customer Support | Ticket system for inquiries and complaints |
 
 ### Marketplace Integration
@@ -163,7 +188,12 @@ graph TB
 | Analytics | Sales performance extraction from marketplace platforms |
 | Token Management | Auto-refresh OAuth tokens 30 minutes before expiry |
 
-### Agent System
+### Agent System *(legacy — hidden by default)*
+
+Built for the batik factory's reseller network. The dropship store does not use it, so it sits behind
+`NEXT_PUBLIC_FEATURE_AGENTS` / `AGENTS_ENABLED`, off by default. Kept rather than deleted, because the
+model may come back.
+
 | Feature | Description |
 |---------|-------------|
 | Agent Portal | Dedicated dashboard with KPIs, orders, customers & team management |
@@ -175,7 +205,7 @@ graph TB
 ### Multi-Courier Shipping
 | Feature | Description |
 |---------|-------------|
-| Parcel Daily Integration | 16 couriers — DHL, Flash, J&T, NinjaVan, City-Link, Pos Laju, SF Standard, SF Economy, Aramex, Best Express, Line Clear, Teleport, RedLy, Shopee Express, LEX, KEX Express |
+| Parcel Daily Integration | Aggregator covering the 16 courier codes in `KnownCouriers` — DHL eCommerce, Flash, J&T, Ninja Van, City-Link, Pos Laju, SF Standard, SF Economy, Aramex, Best Express, Line Clear, Teleport, RedLy, Shopee Express, LEX, KEX Express. Which ones actually quote is Parcel Daily's answer at runtime |
 | Rate Comparison | Real-time rate quotes across all available couriers |
 | Label Generation | Thermal connote and A4 shipping label generation |
 | Tracking Webhooks | Automatic status updates via courier webhook callbacks |
@@ -258,14 +288,14 @@ graph LR
 | **UI Components** | shadcn/ui + Tailwind CSS | Modern user interface |
 | **State Management** | Zustand | Client-side state (storefront) |
 | **Animations** | Framer Motion | Smooth UI transitions |
-| **Database** | PostgreSQL 16 | Primary data store with 16 schemas |
+| **Database** | PostgreSQL 16 | Primary data store with 17 schemas |
 | **Cache** | Redis 7 | Sessions, rate limiting, distributed locks |
 | **Search** | Meilisearch | Fast full-text product search (typo-tolerant) |
 | **Message Broker** | NATS JetStream | Inter-service communication (event-driven) |
 | **Object Storage** | MinIO | Product images, documents |
 | **Image Processing** | Rembg | AI-powered background removal |
 | **Payment Gateway** | Curlec FPX | Online banking payments (Malaysia) |
-| **Shipping** | Parcel Daily + SF Express | Multi-courier shipping (16+ couriers) |
+| **Shipping** | Parcel Daily, Pos Laju, SF Express | Three courier providers; Parcel Daily aggregates 16 courier codes |
 | **Tracing** | Jaeger + OpenTelemetry | Distributed request tracing |
 | **Error Monitoring** | Sentry | Real-time error tracking & alerting |
 | **Reverse Proxy** | Nginx | SSL termination, load balancing |
@@ -278,51 +308,59 @@ graph LR
 ```
   Source Code Total
   ═══════════════════════════════════════
-  Backend (Go)         : 130,000+ lines  │  556+ files
-  Frontend (TypeScript): 151,000+ lines  │  600+ files
-  E2E Tests            :   4,600+ lines  │   29  files
+  Backend (Go)         : 134,275 lines  │   568 files
+  Frontend (TS/TSX)    : 153,395 lines  │   636 files
   ─────────────────────────────────────
-  TOTAL                : 285,000+ lines  │ 1,185+ files
+  TOTAL                : 287,670 lines  │ 1,204 files
+
+  Separate E2E suite   :   1,942 lines  │    21 Playwright specs
 ```
+
+Counted on 2026-09-03 with `git ls-files '*.go'` and `git ls-files '*.ts' '*.tsx'` piped through `wc -l`, so
+these are tracked source files only — no vendored code, no `node_modules`, no generated output. Frontend
+totals include `lib-ui` and the in-repo `*.spec.ts` files; the separate line is the standalone Playwright
+suite in the umbrella repo.
 
 ### Backend — 10 Microservices
 
-| Service | Lines of Code | Description |
-|---------|---------------|-------------|
-| `service-order` | ~30,000 | Orders, payments (Curlec FPX), multi-courier shipping, returns |
-| `service-catalog` | ~29,000 | Products, categories, flash sales, reviews, CMS, tailoring |
-| `service-marketplace` | ~17,000 | Shopee & TikTok integration, returns, stock reconciliation |
-| `service-inventory` | ~11,000 | Stock, warehouses, transfers, distributed locking |
-| `service-auth` | ~8,400 | JWT authentication, RBAC, 2FA (TOTP), activity logging |
-| `service-customer` | ~7,600 | Customer profiles, addresses, wishlist |
-| `service-agent` | ~7,000 | Sales agents, category commissions, team management (DDD) |
-| `service-reporting` | ~4,700 | Sales reports, analytics, CSV/PDF exports |
-| `service-support` | ~4,600 | Support tickets, canned responses (DDD) |
-| `service-notification` | ~2,300 | Email & message notifications |
-| `lib-common` | ~8,500 | Shared library (saga, outbox, resilience, telemetry) |
+| Service | Lines of Go | Description |
+|---------|-------------|-------------|
+| `service-order` | 31,889 | Cart, orders, payments (Curlec + bank transfer), multi-courier shipping, invoices, refunds, returns |
+| `service-catalog` | 29,230 | Products, variants, categories, images, sales channels, flash sales, CMS |
+| `service-marketplace` | 17,712 | Shopee & TikTok sync, returns, stock reconciliation |
+| `service-inventory` | 10,632 | Stock per warehouse, transfers, low-stock alerts, distributed locking |
+| `lib-common` | 9,372 | Shared library (config, db, NATS, auth middleware, outbox, saga, resilience, telemetry) |
+| `service-auth` | 8,624 | JWT authentication, RBAC, 2FA (TOTP), activity logging |
+| `service-customer` | 7,821 | Customer profiles, addresses, wishlist, tiers, RFM |
+| `service-agent` | 6,961 | Sales agents and commissions (DDD) — **legacy, hidden by default** |
+| `service-reporting` | 4,667 | Sales reports, analytics, CSV/PDF exports |
+| `service-support` | 4,581 | Support tickets, categories, messages, canned responses (DDD) |
+| `service-notification` | 2,786 | JetStream consumer: email (SMTP) and SMS (Twilio, stub by default). No HTTP API |
 
 ### Frontend — 3 Applications
 
-| Application | Lines of Code | Description |
-|-------------|---------------|-------------|
-| `frontend-admin` | ~88,000 | Full admin panel with all management modules |
-| `frontend-storefront` | ~55,000 | Customer online store with search & checkout, and the sales agent portal |
-| `frontend-warehouse` | ~3,500 | Warehouse management |
+| Application | Lines of TS/TSX | Description |
+|-------------|-----------------|-------------|
+| `frontend-admin` | 80,678 | Back-office at `/admin` — every management module |
+| `frontend-storefront` | 53,427 | Customer online store: browse, search, cart, checkout, account |
+| `lib-ui` | 16,482 | Shared React components (admin uses it heavily, storefront barely) |
+| `frontend-warehouse` | 2,808 | Picking / packing PWA — **a mock**: mock login, 4 of its 6 API modules are fixtures |
 
 The sales agent portal was once its own app. It now lives inside the storefront under `/account`
-(order wizard, commissions, customers), with its components shared through `lib-ui/src/agent/`.
+(commissions, customers), with its components shared through `lib-ui/src/agent/`. It is legacy and hidden
+behind `NEXT_PUBLIC_FEATURE_AGENTS`, off by default. The agent order wizard was never built.
 
 ### Infrastructure
 
 | Component | Count |
 |-----------|-------|
 | Database Schemas | 17 |
-| Database Tables | 135 |
+| Database Tables | 132 (plus 3 views) |
 | Foreign Keys | 73 |
 | Docker Containers | 21 (on the retired VPS) |
 | Git Repositories | 19 |
-| E2E Test Files | 29 |
-| Supported Couriers | 16+ (via Parcel Daily) |
+| E2E Test Files | 21 Playwright specs |
+| Courier Providers | 3 implemented; Parcel Daily aggregates 16 courier codes |
 
 ---
 
@@ -372,7 +410,7 @@ A single PostgreSQL database with **16 separate schemas** — each microservice 
 
 ```mermaid
 graph TB
-    subgraph PostgreSQL["PostgreSQL 16 — kilang_batik"]
+    subgraph PostgreSQL["PostgreSQL 16 — niaga_db"]
         subgraph auth_schema["auth"]
             AU_1["users"]
             AU_2["sessions"]
@@ -471,7 +509,7 @@ graph TB
 
 | Feature | Description |
 |---------|-------------|
-| Schema-per-Service | 16 schemas — clear data isolation per microservice |
+| Schema-per-Service | 17 schemas — clear data isolation per microservice |
 | Foreign Key Constraints | Cross-schema references for data integrity |
 | Check Constraints | DB-level validation (e.g., order amounts must be positive) |
 | Optimized Indexes | B-tree, GIN, and partial indexes for query performance |
@@ -513,7 +551,7 @@ Key technical challenges solved during the development of this platform:
 ### 1. Multi-Courier Rate Comparison
 **Problem:** Malaysian e-commerce needs flexible shipping — different couriers have different rates, coverage areas, and speeds. Manual comparison across 16 couriers is impractical.
 
-**Solution:** Integrated Parcel Daily API as a courier aggregator. The system queries all 16 couriers simultaneously for rate quotes, presents options sorted by price, and handles order creation + label generation + webhook tracking through a unified interface.
+**Solution:** Integrated Parcel Daily API as a courier aggregator. The system asks it for rate quotes across the 16 courier codes it knows, presents whichever come back sorted by price, and handles order creation + label generation + webhook tracking through a unified interface.
 
 ### 2. Marketplace Order Sync with Shopee Discounts
 **Problem:** Shopee allows vouchers/discounts that make order totals lower than the item subtotal. This caused `shipping_cost` to become negative.
@@ -545,10 +583,10 @@ Key technical challenges solved during the development of this platform:
 
 **Solution:** SKU matching system mapping `external_sku` to `internal_product_id` during product sync, enabling stock tracking across channels.
 
-### 8. One Database, 16 Separate Schemas
+### 8. One Database, 17 Separate Schemas
 **Problem:** How to isolate data for 10 microservices without running 10 databases (overhead on single VPS).
 
-**Solution:** Schema-per-service pattern — one PostgreSQL database with 16 schemas. Each service accesses only its schema with cross-reference capability.
+**Solution:** Schema-per-service pattern — one PostgreSQL database (`niaga_db`) with 17 schemas. Each service accesses only its schema with cross-reference capability.
 
 ---
 
@@ -985,7 +1023,7 @@ sequenceDiagram
 
 ---
 
-### 9. Agent Commission Flow
+### 9. Agent Commission Flow *(legacy — off by default)*
 
 Sales agents register through admin, place orders, and earn category-specific commissions.
 
@@ -1351,18 +1389,21 @@ Comprehensive end-to-end testing with **Playwright** covering all service domain
 
 | Domain | Test Files | Coverage |
 |--------|-----------|----------|
-| **Auth** | 4 files | Login, registration, RBAC enforcement, admin operations |
-| **Catalog** | 5 files | Products, categories, CMS, search, admin operations |
-| **Order** | 8 files | Cart, checkout, lifecycle, payment, shipping, returns, admin ops |
-| **Customer** | 2 files | Profile management, admin operations |
-| **Inventory** | 2 files | Stock operations, admin operations |
-| **Marketplace** | 2 files | Connections, product/order sync |
-| **Agent** | 1 file | Agent CRUD, commissions |
+| **Order** | 6 files | Cart, checkout, lifecycle, payment, shipping, returns |
+| **Catalog** | 4 files | Products, categories, CMS, search |
+| **Cross-Service** | 3 files | Full purchase flow, RBAC enforcement, returns |
+| **Auth** | 2 files | Login, RBAC enforcement |
+| **Customer** | 1 file | Profile management |
+| **Inventory** | 1 file | Stock operations |
+| **Marketplace** | 1 file | Connections |
+| **Agent** | 1 file | Agent CRUD, commissions *(legacy)* |
 | **Reporting** | 1 file | Sales reports |
 | **Support** | 1 file | Support tickets |
-| **Cross-Service** | 3 files | Full purchase flow, RBAC enforcement, returns |
 
-**29 test files** | **~4,600 lines** | **10 service domains** | Rate-limit handling & retry logic built-in
+**21 test files** | **1,942 lines** | **10 service domains** | Rate-limit handling & retry logic built-in
+
+Counted from the tracked `*.spec.ts` files in the umbrella repo's `e2e-tests/`. The three frontends carry
+their own in-repo Playwright specs on top of this.
 
 ---
 
@@ -1380,7 +1421,7 @@ the scripts remain in `infra-platform` for reference.
   Containers     : 21 Docker containers
   Orchestration  : Docker Compose
   Reverse Proxy  : Nginx + SSL (Let's Encrypt)
-  Database       : PostgreSQL 16 (16 schemas)
+  Database       : PostgreSQL 16 (17 schemas)
   Cache          : Redis 7
   Search         : Meilisearch
   Event Bus      : NATS JetStream
@@ -1416,7 +1457,7 @@ through it.
 
 Solo Full-Stack Developer & System Architect
 
-*Go, Next.js, PostgreSQL, Docker, and the spirit of Malaysian batik*
+*Go, Next.js, PostgreSQL, Docker — Niaga, built in Terengganu*
 
 Terengganu, Malaysia
 
